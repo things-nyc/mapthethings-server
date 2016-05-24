@@ -1,0 +1,6 @@
+{
+  "name": "Thingsburg Server",
+  "description": "Server parts of Thingsburg application.",
+  "image": "heroku/clojure",
+  "addons": [ "heroku-postgresql" ]
+}
