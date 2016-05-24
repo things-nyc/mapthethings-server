@@ -16,11 +16,7 @@
   (:import [ch.hsr.geohash GeoHash]
            [com.amazonaws.auth BasicAWSCredentials]
            [com.amazonaws.services.s3.model AmazonS3Exception]
-           [com.amazonaws.services.dynamodbv2 AmazonDynamoDBClient]
-           [com.amazonaws.services.dynamodbv2.model CreateTableRequest ProvisionedThroughput ResourceInUseException]
-           [com.amazonaws.regions Regions]
-           [com.amazonaws.geo GeoDataManagerConfiguration GeoDataManager]
-           [com.amazonaws.geo.util GeoTableUtil]))
+           [com.amazonaws.regions Regions]))
 
 (def bit-prefix "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_:")
 

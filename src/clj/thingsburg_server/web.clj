@@ -71,7 +71,7 @@
   (let [port (Integer. (or port (env :port) 5000))
         app (make-app)]
     (log/info "Binding to:" (str port))
-    (let [ddb (geo/get-ddb)
+    #_(let [ddb (geo/get-ddb)
           manager (geo/geo-manager ddb)
           ;table (create-table ddb)
           ]

@@ -8,10 +8,10 @@
            [com.amazonaws.services.dynamodbv2 AmazonDynamoDBClient]
            [com.amazonaws.services.dynamodbv2.model CreateTableRequest ProvisionedThroughput ResourceInUseException]
            [com.amazonaws.regions Regions]
-           [com.amazonaws.geo GeoDataManagerConfiguration GeoDataManager]
-           [com.amazonaws.geo.util GeoTableUtil]))
+           #_[com.amazonaws.geo GeoDataManagerConfiguration GeoDataManager]
+           #_[com.amazonaws.geo.util GeoTableUtil]))
 
-(defn get-ddb []
+#_(defn get-ddb []
   (let [credentials (BasicAWSCredentials. (env :aws-access-key) (env :aws-secret-key))
         ddb (AmazonDynamoDBClient. credentials)
         ; region (Regions/getRegion Regions/US_WEST_2)
@@ -19,7 +19,7 @@
        ]
     ddb))
 
-(defn geo-config [ddb]
+#_(defn geo-config [ddb]
   (let [config (GeoDataManagerConfiguration. ddb, "geo-test")]
     #_(-> config
       (.withHashKeyAttributeName "customHashKey")
@@ -29,10 +29,10 @@
       (.withGeohashIndexName "custom-geohash-index"))
     config))
 
-(defn geo-manager [ddb]
+#_(defn geo-manager [ddb]
   (GeoDataManager. (geo-config ddb)))
 
-(defn create-table [ddb]
+#_(defn create-table [ddb]
   (let [createTableRequest (GeoTableUtil/getCreateTableRequest (geo-config ddb))
         provisionedThroughput (-> (new ProvisionedThroughput)
                                 (.withReadCapacityUnits 5)

@@ -2,7 +2,7 @@
   :description "Thingsburg"
   :url "http://thingsburg-server.herokuapp.com"
   :license {:name "Proprietary Copyright (c) 2016 Frank Leon Rose"}
-  :repositories {"local" "file:local_repo"}
+  ;:repositories {"local" "file:${project.basedir}/local_repo"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/data.json "0.2.6"]
@@ -17,7 +17,7 @@
                  [ring/ring-jetty-adapter "1.4.0"]
                  [ring/ring-defaults "0.2.0"]
                  [nilenso/mailgun "0.1.0-SNAPSHOT"]
-                 [environ "1.0.0"]
+                 [environ "1.0.3"]
                  [hickory "0.6.0"]
                  [org.clojure/data.codec "0.1.0"]
                  ;;ClojureScript
@@ -26,16 +26,16 @@
                  [prismatic/dommy "1.1.0"]
                  [clojurewerkz/machine_head "1.0.0-beta9"]
                  [amazonica "0.3.57"]
-                 [com.amazonaws.geo/dynamodb-geo "1.0.0"]
+                 ;[com.amazonaws.geo/dynamodb-geo "1.0.0"]
                  ]
   :min-lein-version "2.0.0"
   :source-paths ["src/clj"]
   :test-paths ["test/clj"]
   :plugins [
-    [environ/environ.lein "0.3.1"]
+    [lein-environ "1.0.3"]
     [lein-figwheel "0.4.1"]
     ]
-  :hooks [environ.leiningen.hooks]
+  :hooks [lein-environ.plugin/hooks]
   :uberjar-name "thingsburg-server-standalone.jar"
   :main thingsburg-server.web
   :aot [thingsburg-server.web]
