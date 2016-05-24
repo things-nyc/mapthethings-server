@@ -42,6 +42,9 @@
 (defn s3-key [hash]
   (format "%s-v0" (s/reverse hash)))
 
+(defn s3-url [hash]
+  (format "https://s3.amazonaws.com/%s/%s" grid-bucket (s3-key hash)))
+
 (defn grid-stack-hashes
   "Return the set of hashes for grids containing the lat/lon
   coordinate at scales from level0 to level20"
@@ -177,13 +180,13 @@
       ; Mark atom dirty - needs saving
       (let [{write :write} (swap! dirty update :count inc)]
         (go
-          (log/debugf "Starting to wait to update \"" _key "\"")
+          (log/debug "Waiting to update \"" _key "\"")
           (<! (timeout 30000))
           (if (= write (:write @dirty)) ; Same past write frame
             (let [dold @dirty
                   dnew (assoc dold :write (:count dold))
                   winner (compare-and-set! dirty dold dnew)
-                  _ (if winner (log/debugf "Winner of save competition! \"" _key "\""))]
+                  _ (if winner (log/debug "Updating \"" _key "\""))]
               (if winner
                 (write-grid-s3 @grid-atom)))))))))
 
@@ -219,3 +222,43 @@
               grid-atom (<! (fetch-grid hash))
               _ (log/debug "Fetched grid-atom" grid-atom)]
           (swap! grid-atom update-grid msg)))))))
+
+(defn generate-view-grids [lat lon x-count y-count level]
+  (vec
+    (let [start (grid-hash-raw lat lon level)]
+      (for [x (range x-count)
+            y (range y-count)]
+        (let [geo (if (zero? x) start ((apply comp (repeat x #(.getEasternNeighbour %))) start))
+              geo (if (zero? y) geo ((apply comp (repeat y #(.getSouthernNeighbour %))) start))]
+          (geohash-to-string geo))))))
+
+(defn view-grids
+  "Return a set of hashes representing grids that would cover view"
+  ([lat1 lon1 lat2 lon2]
+    (view-grids lat1 lon1 lat2 lon2 0))
+
+  ([lat1 lon1 lat2 lon2 depth]
+  (loop [level 20]
+    (if (zero? level)
+      [(grid-hash lat1 lon1 level)]
+      (let [geo1 (grid-hash-raw lat1 lon1 level)
+            box1 (.getBoundingBox geo1)
+            geo2 (grid-hash-raw lat2 lon2 level)
+            box2 (.getBoundingBox geo2)
+            ul1 (.getUpperLeft box1)
+            lr1 (.getLowerRight box1)
+
+            ulat (.getLatitude ul1)
+            box-height (Math/abs (- ulat (.getLatitude lr1)))
+            llat (.getLatitude (.getLowerRight box2))
+            y-count (inc (int (/ (Math/abs (- ulat llat)) box-height)))
+
+            llon (.getLongitude ul1)
+            box-width (Math/abs (- (.getLongitude lr1) llon))
+            rlon (.getLongitude (.getLowerRight box2))
+            x-count (inc (int (/ (Math/abs (- rlon llon)) box-width)))
+            ]
+        #_(log/debug "x-count" x-count ", y-count" y-count)
+        (if (<= x-count 4)
+          (generate-view-grids lat1 lon1 x-count y-count level)
+          (recur (dec level))))))))

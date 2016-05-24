@@ -96,7 +96,18 @@
           lon -179.0
           level 4
           hash (grid-hash lat lon level)
-          _ (log/debug "Hash" hash "GridCache" @GridCache)
+          ;_ (log/debug "Hash" hash "GridCache" @GridCache)
           grid-atom (make-grid-atom {:level level :hash hash :cells {}})
-          _ (log/debug "GridCache post change" @GridCache)]
+          ;_ (log/debug "GridCache post change" @GridCache)
+          ]
       (is (some? (cache/lookup @GridCache hash))))))
+
+(deftest view-grids-test
+  (testing "Return a set of hashes representing grids that would cover view"
+    (let [lat1 -10.0
+          lon1 -10.0
+          lat2 10.0
+          lon2 10.0
+          hashes (view-grids lat1 lon1 lat2 lon2)]
+      (is (some? hashes))
+      (is (= hashes ["KFE" "KFB" "KFA" "K254" "KFB" "KFA" "K256" "KFB" "KFA"])))))

@@ -2,7 +2,9 @@
   (:require [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.data.json :as json]
             [ring.adapter.jetty :as jetty]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.defaults :refer :all]
@@ -15,12 +17,18 @@
              :as async
              :refer [>! <! >!! <!! go go-loop chan buffer close! thread
                      alts! alts!! timeout]])
+  (:import [ch.hsr.geohash GeoHash])
   (:gen-class))
 
 (defn splash []
   {:status 200
    :headers {"Content-Type" "text/plain"}
-   :body "Make requests better."})
+   :body "Welcome to Thingsburg!"})
+
+(defn view-grids-response [lat1 lon1 lat2 lon2]
+  {:status 200
+   :headers {"Content-Type" "application/json"}
+   :body (json/write-str (mapv grids/s3-url (grids/view-grids lat1 lon1 lat2 lon2)) :escape-slash false)})
 
 (defn ttn-handler []
   (let [in (chan)]
@@ -54,10 +62,9 @@
 
 (defroutes routes
   (GET "/" [] (splash))
-  (POST "/inbound-email"
-    ;curl --data "param1=value1&param2=value2" http://localhost:5000/inbound-email --header "X-MyHeader: 123"
-    {{inbound-chan :inbound-chan} :services :as request}
-    #_(handler request inbound-chan))
+  (GET "/api/v0/refs/:lat1/:lon1/:lat2/:lon2"
+    [lat1 lon1 lat2 lon2 :as request]
+    (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
   (POST "/inbound-email-mime"
     ;curl --form param1=value1 --form Return-Path=value2 http://localhost:5000/inbound-email-mime
     {{inbound-chan :inbound-chan} :services :as request}

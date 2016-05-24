@@ -12,7 +12,14 @@
     (let [app (make-app)
           response (app (request :get "/"))]
       (is (= 200 (:status response)))
-      (is (= "Make requests better." (:body response))))))
+      (is (= "Welcome to Thingsburg!" (:body response))))))
+
+(deftest view-grids-test
+  (testing "view grids endpoint"
+    (let [app (make-app)
+          response (app (request :get "/api/v0/refs/10.0/10.0/8.0/12.0"))]
+      (is (= 200 (:status response)))
+      (is (= "[\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/B70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/A70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/F60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/4D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/B70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/A70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/F60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/6D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/B70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/A70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/F60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E60CQ-v0\"]" (:body response))))))
 
 #_(deftest inbound-email
   (testing "inbound email endpoint"
