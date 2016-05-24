@@ -8,9 +8,9 @@
             [ring.mock.request :refer :all]
             [thingsburg-server.grids :refer :all]))
 
-(deftest bounding-hashes-test
+(deftest grid-stack-hashes-test
   (testing "generating bounding hashes"
-    (let [hashes (bounding-hashes 27.0 45.0)]
+    (let [hashes (grid-stack-hashes 27.0 45.0)]
       (is (= 20 (count hashes))))))
 
 (deftest s3-key-test
@@ -61,7 +61,7 @@
             :hash hash
             :cells {}
           }
-          msg {:lat lat :lon lon :rssi 2.2 :lsnr 1.3}
+          msg {:ttn true :lat lat :lon lon :rssi 2.2 :lsnr 1.3}
           updated (update-grid grid msg)
           updated-again (update-grid updated msg)]
       (is (some? updated))
@@ -74,12 +74,13 @@
 
 (deftest sample-update-test
   (testing "sample updating"
-    (let [hashes (bounding-hashes 27.0 45.0)]
+    (let [hashes (grid-stack-hashes 27.0 45.0)]
       (is (= 20 (count hashes))))))
 
 (deftest handle-msg-test
   (testing "Processing in response to a ttn message"
     (let [msg {
+      :ttn true
       :lat 35.0
       :lon 35.0
       :rssi 1.0
@@ -99,23 +100,3 @@
           grid-atom (make-grid-atom {:level level :hash hash :cells {}})
           _ (log/debug "GridCache post change" @GridCache)]
       (is (some? (cache/lookup @GridCache hash))))))
-
-#_(deftest inbound-email
-  (testing "inbound email endpoint"
-    (let [email {
-            "sender" "initiator@email.com"
-            "Return-Path" "<initiator@email.com>"
-            "recipient" "r@req.futurose.com"
-            "Subject" "Request for Information"
-            "body-plain" "Text plain"
-            "body-html" "<html><body><p>This is HTML paragraph.</p></body></html>"
-          }
-          ic (chan 1)
-          app (make-app {:inbound-chan ic})
-          req (request :post "/inbound-email" email)
-          response (app req)]
-      (is (= 200 (:status response)))
-      (is (= "" (:body response)))
-      (let [inmail (<!! ic)]
-        (is (= "initiator@email.com" (:sender inmail))))
-      (close! ic))))

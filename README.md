@@ -7,13 +7,15 @@
 - Generate summary of GIS data at multiple scales to support API
 
 ## TODO
-DONE - Subscribe to TTN MQQT broker at staging.thethingsnetwork.org:1883
-- Store message in database
-- API serves samples within Geobox
-- Web app shows samples within Geobox
+- DONE - Subscribe to TTN MQQT broker at staging.thethingsnetwork.org:1883
+- DONE - Update global hierarchy of grids
+- Store raw messages to S3 (we'll want to replay them sometime)
+- API serves list of URL's within Geobox: 1 grid containing the entire,
+  and also layers beneath that grid dividing it into 4 and 16
+- Web app renders rectangles in JSON: Loads from public S3 and plots lat/lon boxes
+- Write task that sends 1000's of messages
 - Login with Firebase Authentication (or something else enabling Twitter, Facebook, Github, Google)
 - Deliver APP key for each user to use - may be revoked
-- Serve different resolutions
 
 ## Running Locally
 
