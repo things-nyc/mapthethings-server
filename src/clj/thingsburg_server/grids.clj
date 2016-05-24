@@ -203,6 +203,7 @@
   [hash]
   (if-let [grid-atom (cache/lookup @GridCache hash nil)]
     (do ; Found in cache. Mark hit and push through channel.
+      (if (not= hash (:hash @grid-atom)) (throw (Exception. (format "Hash key [%s] does not match hash of returned grid [%]." hash (:hash @grid-atom)))))
       (log/debug "Found grid atom for hash " hash " in cache!")
       (swap! GridCache cache/hit hash)
       (go grid-atom))
@@ -249,13 +250,14 @@
             lr1 (.getLowerRight box1)
 
             ulat (.getLatitude ul1)
-            box-height (Math/abs (- ulat (.getLatitude lr1)))
             llat (.getLatitude (.getLowerRight box2))
+            box-height (Math/abs (- ulat (.getLatitude lr1)))
             y-count (inc (int (/ (Math/abs (- ulat llat)) box-height)))
 
             llon (.getLongitude ul1)
-            box-width (Math/abs (- (.getLongitude lr1) llon))
             rlon (.getLongitude (.getLowerRight box2))
+            rlon (if (< rlon llon) (+ rlon 360) rlon)
+            box-width (Math/abs (- (.getLongitude lr1) llon))
             x-count (inc (int (/ (Math/abs (- rlon llon)) box-width)))
             ]
         #_(log/debug "x-count" x-count ", y-count" y-count)

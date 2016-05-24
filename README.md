@@ -12,6 +12,7 @@
 - Store raw messages to S3 (we'll want to replay them sometime)
 - DONE - API serves list of URL's covering Geobox
 - Support requesting lower depth within Geobox
+- Support TTN message with plain text for testing
 - Web app renders rectangles in JSON: Loads from public S3 and plots lat/lon boxes
 - Write task that sends 1000's of messages
 - Login with Firebase Authentication (or something else enabling Twitter, Facebook, Github, Google)

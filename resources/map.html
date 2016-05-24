@@ -15,15 +15,18 @@
 <body>
   <h2>Welcome to Thingsburg</h2>
   <div id="mapid"></div>
+  <div id="boundsid">Bounds: </div>
   <script>
   var newyork = [40.7128, -74.0059]
   var dataloc = [20.0, 20.0]
-  var mymap = L.map('mapid').setView(dataloc, 13);
-  L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+  var mymap = L.map('mapid').setView(newyork, 13);
+
+  //L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+  L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
       attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
       maxZoom: 18,
-      id: 'mapbox.mapbox-streets-v7',
-      accessToken: 'pk.eyJ1IjoiZnJhbmtsZW9ucm9zZSIsImEiOiJjaW9sbm5pcWEwMXFwdjRqYjRmNHgxZ2s1In0.tk3zEksdrebcG4_KKUAL4Q'
+      id: 'mapbox.mapbox-streets-v4',
+      //accessToken: 'pk.eyJ1IjoiZnJhbmtsZW9ucm9zZSIsImEiOiJjaW9sbm5pcWEwMXFwdjRqYjRmNHgxZ2s1In0.tk3zEksdrebcG4_KKUAL4Q'
   }).addTo(mymap);
 
   mymap.on('moveend', function (e) {
@@ -32,15 +35,17 @@
     loadGrids(bounds)
   })
 
+  var markers = null
   var loadGrids = function (bounds) {
     var lon1 = bounds.getWest()
     var lon2 = bounds.getEast()
     var lat1 = bounds.getNorth()
     var lat2 = bounds.getSouth()
+    $("#boundsid").text("Bounds: [" + lat1 + ", " + lon1 + "], [" + lat2 + ", " + lon2 + "]")
     var apiurl = "/api/v0/refs/" + lat1 + "/" + lon1 + "/" + lat2  + "/" + lon2
     $.getJSON(apiurl, function( data ) {
       console.log(data)
-      var items = [];
+      var polygons = [];
       //data = ["https://s3.amazonaws.com/com.futurose.thingsburg.grids/0E70E703e-v0"]
       $.each( data, function( i, url ) {
         $.getJSON( url, function( grid ) {
@@ -48,14 +53,27 @@
           console.log(grid)
           $.each( grid.cells, function (key, cell) {
             var polygon = L.polygon([
-                [cell.lon1, cell.lat1],
-                [cell.lon2, cell.lat1],
-                [cell.lon2, cell.lat2],
-                [cell.lon1, cell.lat2]
-            ]).addTo(mymap);
+                [cell.lat1, cell.lon1],
+                [cell.lat2, cell.lon1],
+                [cell.lat2, cell.lon2],
+                [cell.lat1, cell.lon2]
+            ])
+            polygon.addTo(mymap)
+            polygons.push(polygon)
           })
         })
-      });
+      })
+      if (markers!=null) {
+        console.log("Removing markers from Map")
+        $.each( markers, function( i, p ) {
+          mymap.removeLayer(p)
+        })
+        //mymap.removeLayer(mymap)
+      }
+      //markers = L.multiPolygon(polygons)
+      markers = polygons
+      //console.log(markers)
+      //markers.addTo(mymap);
     })
   }
   loadGrids(mymap.getBounds())
