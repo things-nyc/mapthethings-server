@@ -22,8 +22,8 @@
 
 (defn splash []
   {:status 200
-   :headers {"Content-Type" "text/plain"}
-   :body "Welcome to Thingsburg!"})
+   :headers {"Content-Type" "text/html"}
+   :body (slurp (io/resource "map.html"))})
 
 (defn view-grids-response [lat1 lon1 lat2 lon2]
   {:status 200
