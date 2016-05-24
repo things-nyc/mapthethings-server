@@ -1,6 +1,7 @@
 (ns thingsburg-server.grids-test
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
+            [clojure.core.cache :as cache]
             [clojure.core.async
              :refer [>! <! >!! <!! go chan close! merge timeout]]
             [clojure.tools.logging :as log]
@@ -54,18 +55,22 @@
           lon 34.2
           level 2
           hash (grid-hash lat lon level)
-          chash (cell-hash lat lon level)
+          chash (keyword (cell-hash lat lon level))
           grid {
             :level level
             :hash hash
             :cells {}
           }
           msg {:lat lat :lon lon :rssi 2.2 :lsnr 1.3}
-          updated (update-grid grid msg)]
-      (println updated)
+          updated (update-grid grid msg)
+          updated-again (update-grid updated msg)]
       (is (some? updated))
       (is (= (get-in updated [:cells chash :ok]) 1))
-      (is (= (get-in updated [:cells chash :pings]) 1)))))
+      (is (= (get-in updated [:cells chash :pings]) 1))
+      (is (some? updated-again))
+      (is (= (get-in updated-again [:cells chash :ok]) 2))
+      (is (= (get-in updated-again [:cells chash :pings]) 2))
+      )))
 
 (deftest sample-update-test
   (testing "sample updating"
@@ -81,9 +86,19 @@
       :lsnr 1.0
       }
       results (map #(<!! %) (handle-msg msg))]
-      (println results)
       (is (= 20 (count results))
       (<!! (go (<! (timeout 45000))))))))
+
+(deftest make-grid-atom-test
+  (testing "Make a grid atom and it should go in the cache"
+    (let [lat -89.0
+          lon -179.0
+          level 4
+          hash (grid-hash lat lon level)
+          _ (log/debug "Hash" hash "GridCache" @GridCache)
+          grid-atom (make-grid-atom {:level level :hash hash :cells {}})
+          _ (log/debug "GridCache post change" @GridCache)]
+      (is (some? (cache/lookup @GridCache hash))))))
 
 #_(deftest inbound-email
   (testing "inbound email endpoint"

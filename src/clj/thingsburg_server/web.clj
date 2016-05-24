@@ -9,10 +9,11 @@
             [environ.core :refer [env]]
             [thingsburg-server.geo :as geo]
             [thingsburg-server.grids :as grids]
+            [thingsburg-server.data :as data]
             [clojurewerkz.machine-head.client :as mh]
             [clojure.core.async
              :as async
-             :refer [>! <! >!! <!! go chan buffer close! thread
+             :refer [>! <! >!! <!! go go-loop chan buffer close! thread
                      alts! alts!! timeout]])
   (:gen-class))
 
@@ -21,15 +22,33 @@
    :headers {"Content-Type" "text/plain"}
    :body "Make requests better."})
 
-(defn inbound-processor []
+(defn ttn-handler []
   (let [in (chan)]
-    (go (while true
-      (try
-        (let [work (<! in)]
-          ; Process work
-          )
-        (catch Exception e
-          (log/error e "Failed to do work")))))
+    (go-loop []
+      (when-let [ttn-string (<! in)]
+        (try
+          (log/debug "Received ttn-string" ttn-string)
+          (let [ttn (data/ttn-string->clj ttn-string)
+                msg (data/ttn->msg ttn)]
+            (log/debug "Converted to msg:" msg)
+            (grids/handle-msg msg))
+          (catch Exception e
+            (log/error e "Failed handling TTN message")))
+        (recur)))
+      ; (close! in) TODO
+    in))
+
+(defn ping-handler []
+  (let [in (chan)]
+    (go-loop []
+      (when-let [ping (<! in)]
+        (try
+          (log/debug "Received ping-string" ping)
+          (let []
+            (grids/handle-msg ping))
+          (catch Exception e
+            (log/error e "Failed handling ping.")))
+        (recur)))
       ; (close! in) TODO
     in))
 
@@ -61,29 +80,38 @@
 
   ([services]
   (let [ic (:inbound-chan services)
-        services (if ic services (assoc services :inbound-chan (inbound-processor)))]
+        services (if ic services (assoc services :inbound-chan (ping-handler)))]
     (-> routes
       (wrap-services services)
       (wrap-defaults api-defaults)
       #_(wrap-log-request)))))
 
+(defn connect-to-ttn []
+  (let [work-channel (ttn-handler)
+        id   (mh/generate-id)
+        mqtt-url (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883")
+        conn (mh/connect mqtt-url id
+              {:username (env :ttn-app-eui) :password (env :ttn-access-password)})]
+    ;; Topic: <AppEUI>/devices/<DevEUI>/up
+    (mh/subscribe conn {"+/devices/+/up" 0}
+      (fn [^String topic _ ^bytes payload]
+        (let [json-string (String. payload "UTF-8")]
+          (log/debug "Received:" json-string)
+          (go (>! work-channel json-string))
+          #_(mh/disconnect conn))))
+    (log/info "Subscribed to " mqtt-url)))
+
+#_(let [ddb (geo/get-ddb)
+      manager (geo/geo-manager ddb)
+      ;table (create-table ddb)
+      ]
+  (log/info #_(.toString table) (.toString manager)))
+
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 5000))
         app (make-app)]
     (log/info "Binding to:" (str port))
-    #_(let [ddb (geo/get-ddb)
-          manager (geo/geo-manager ddb)
-          ;table (create-table ddb)
-          ]
-      (log/info #_(.toString table) (.toString manager)))
-    (let [id   (mh/generate-id)
-          conn (mh/connect "tcp://staging.thethingsnetwork.org:1883" id
-                {:username (env :ttn-app-eui) :password (env :ttn-access-password)})]
-      ;; Topic: <AppEUI>/devices/<DevEUI>/up
-      (mh/subscribe conn {"+/devices/+/up" 0} (fn [^String topic _ ^bytes payload]
-                                     (log/info "Received:" (String. payload "UTF-8"))
-                                     #_(mh/disconnect conn)
-                                     #_(System/exit 0))))
+    (connect-to-ttn)
     (jetty/run-jetty app {:port port :join? false})))
 
 ;; For interactive development:

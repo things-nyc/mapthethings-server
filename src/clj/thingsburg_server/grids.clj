@@ -89,7 +89,7 @@
   (let [level (:level grid)
         lat (:lat msg)
         lon (:lon msg)
-        ch (cell-hash lat lon level)]
+        ch (keyword (cell-hash lat lon level))]
     (if (get-in grid [:cells ch])
       (update-in grid [:cells ch] update-cell msg)
       (assoc-in grid [:cells ch] (update-cell (make-cell lat lon level) msg)))))
@@ -165,7 +165,8 @@
                 (write-grid-s3 @grid-atom)))))))))
 
 (defn make-grid-atom [g]
-  (let [grid-atom (atom g)]
+  (let [hash (:hash g)
+        grid-atom (atom g)]
     (add-watch grid-atom hash (make-grid-watcher))
     (swap! GridCache cache/miss hash grid-atom)
     grid-atom))
@@ -176,16 +177,22 @@
   [hash]
   (if-let [grid-atom (cache/lookup @GridCache hash nil)]
     (do ; Found in cache. Mark hit and push through channel.
+      (log/debug "Found grid atom for hash " hash " in cache!")
       (swap! GridCache cache/hit hash)
       (go grid-atom))
     (go
+      (log/debug "Fetching hash from S3 " hash)
       (make-grid-atom (<! (fetch-grid-s3 hash))))))
 
 (defn handle-msg [msg]
+  (log/debug "handle-msg")
   (let [lat (:lat msg)
         lon (:lon msg)]
-    (for [level (range 20)]
+    (vec (for [level (range 20)]
       (go
+        (log/debug "Handle msg " lat " x " lon " at level " level)
         (let [hash (grid-hash lat lon level)
-              grid-atom (<! (fetch-grid hash))]
-          (swap! grid-atom update-grid msg))))))
+              _ (log/debug "Hash: " hash)
+              grid-atom (<! (fetch-grid hash))
+              _ (log/debug "Fetched grid-atom" grid-atom)]
+          (swap! grid-atom update-grid msg)))))))

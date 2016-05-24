@@ -11,7 +11,7 @@
   "Takes a ttn message and returns a simplified map containing just
   :lat, :lon, :rssi, and :lsnr"
   [ttn]
-  (println ttn)
+  (log/debug ttn)
   {
     :lat (get-in ttn [:payload :latitude])
     :lon (get-in ttn [:payload :longitude])
