@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [clojure.core.async
-             :refer [>! <! >!! <!! go chan close!]]
+             :refer [>! <! >!! <!! go chan close! merge timeout]]
             [clojure.tools.logging :as log]
             [ring.mock.request :refer :all]
             [thingsburg-server.grids :refer :all]))
@@ -31,12 +31,22 @@
   (testing "write grid"
     (let [lat -89.0
           lon -179.0
-          level 2
+          level 4
           hash (grid-hash lat lon level)
           grid (make-grid hash)
           rchan (write-grid-s3 grid)
           result (<!! rchan)]
       (is (nil? (:error result))))))
+
+(deftest fetch-grid-test
+  (testing "fetch grid"
+    (let [lat -89.0
+          lon -179.0
+          level 4
+          hash (grid-hash lat lon level)
+          rchan (fetch-grid hash)
+          grid-atom (<!! rchan)]
+      (is (= @grid-atom {:level 4, :hash "I0", :cells {}})))))
 
 (deftest grid-update-test
   (testing "grid updating"
@@ -61,6 +71,19 @@
   (testing "sample updating"
     (let [hashes (bounding-hashes 27.0 45.0)]
       (is (= 20 (count hashes))))))
+
+(deftest handle-msg-test
+  (testing "Processing in response to a ttn message"
+    (let [msg {
+      :lat 35.0
+      :lon 35.0
+      :rssi 1.0
+      :lsnr 1.0
+      }
+      results (map #(<!! %) (handle-msg msg))]
+      (println results)
+      (is (= 20 (count results))
+      (<!! (go (<! (timeout 45000))))))))
 
 #_(deftest inbound-email
   (testing "inbound email endpoint"

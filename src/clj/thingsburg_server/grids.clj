@@ -138,7 +138,9 @@
             response (s3/put-object :bucket-name grid-bucket
                         :key (s3-key hash)
                         :input-stream input-stream
-                        :metadata {:content-length (count bytes)})]
+                        :metadata {
+                          :content-type "application/json"
+                          :content-length (count bytes)})]
         {:ok response})
     (catch AmazonS3Exception e
       (log/error e "Failed to write grid")
@@ -152,13 +154,21 @@
       ; Mark atom dirty - needs saving
       (let [{write :write} (swap! dirty update :count inc)]
         (go
+          (log/debugf "Starting to wait to update \"" _key "\"")
           (<! (timeout 30000))
           (if (= write (:write @dirty)) ; Same past write frame
             (let [dold @dirty
                   dnew (assoc dold :write (:count dold))
-                  winner (compare-and-set! dirty dold dnew)]
+                  winner (compare-and-set! dirty dold dnew)
+                  _ (if winner (log/debugf "Winner of save competition! \"" _key "\""))]
               (if winner
                 (write-grid-s3 @grid-atom)))))))))
+
+(defn make-grid-atom [g]
+  (let [grid-atom (atom g)]
+    (add-watch grid-atom hash (make-grid-watcher))
+    (swap! GridCache cache/miss hash grid-atom)
+    grid-atom))
 
 (defn fetch-grid
   "Fetches a grid from cache or S3.
@@ -168,12 +178,8 @@
     (do ; Found in cache. Mark hit and push through channel.
       (swap! GridCache cache/hit hash)
       (go grid-atom))
-    (map (fn [g]
-          (let [grid-atom (atom g)]
-            (add-watch grid-atom hash (make-grid-watcher)
-            (swap! GridCache cache/miss hash grid-atom)
-            grid-atom)))
-      (fetch-grid-s3 hash))))
+    (go
+      (make-grid-atom (<! (fetch-grid-s3 hash))))))
 
 (defn handle-msg [msg]
   (let [lat (:lat msg)
