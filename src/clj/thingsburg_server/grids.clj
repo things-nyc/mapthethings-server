@@ -30,11 +30,21 @@
 (defn geohash-to-string [g]
   (format "%s%X" (get bit-prefix (.significantBits g)) (.ord g)))
 
+(defn constrain [min max v]
+  (let [step (- max min)]
+    (cond
+      (< v min) (constrain min max (+ v step))
+      (> v max) (constrain min max (- v step))
+      :else v)))
+  
+(def normalize-lat (partial constrain -90.0 90.0))
+(def normalize-lon (partial constrain -180.0 180.0))
+
 (defn grid-hash-raw [lat lon level]
-    (GeoHash/withBitPrecision lat lon (+ level level)))
+    (GeoHash/withBitPrecision (normalize-lat lat) (normalize-lon lon) (+ level level)))
 
 (defn cell-hash-raw [lat lon level]
-    (GeoHash/withBitPrecision lat lon (+ level level 10)))
+    (grid-hash-raw lat lon (+ level 5))) ; 10 extra bits
 
 (def grid-hash (comp geohash-to-string grid-hash-raw))
 (def cell-hash (comp geohash-to-string cell-hash-raw))
