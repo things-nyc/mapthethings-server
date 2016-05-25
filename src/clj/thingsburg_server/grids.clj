@@ -1,8 +1,6 @@
 (ns thingsburg-server.grids
   (:require [clojure.string :refer [blank? join trim]]
-            [hickory.core :as hickory]
-            [hickory.render :refer [hickory-to-html]]
-            [hickory.select :as select]
+            [clojure.edn :as edn]
             [environ.core :refer [env]]
             [clojure.data.json :as json]
             [amazonica.aws.s3 :as s3]
@@ -21,7 +19,7 @@
 
 (def bit-prefix "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_:")
 
-(def raw-bucket "com.futurose.thingsburg.raw")
+(def raw-bucket "com.futurose.thingsburg.messages")
 (def grid-bucket "com.futurose.thingsburg.grids")
 
 (defn level-from-hash [hash]
@@ -136,20 +134,18 @@
       (update-in grid [:cells ch] update-cell msg)
       (assoc-in grid [:cells ch] (update-cell (make-cell lat lon level) msg)))))
 
-(def GridCache (atom (cache/->LUCache {} {} 100)))
+(def GridCache (atom (cache/->LUCache {} {} (or (edn/read-string (env :grid-cache-size)) 2000))))
 #_(cache/evict C :b)
 
 (defn json->grid [json-grid]
   (json/read-str json-grid
     :key-fn keyword))
 
-(defn grid->json [grid]
-  (json/write-str grid))
-
 (defn make-grid [hash]
   {
     :level (level-from-hash hash)
     :hash hash
+    :write-cnt 0
     :cells {}
   })
 
@@ -164,25 +160,29 @@
                     :bucket-name grid-bucket
                     :key (s3-key hash))))
             grid (json->grid obj)]
-        grid)
+        (update grid :write-cnt incnil)) ; We loaded it because we're going to write it
     (catch AmazonS3Exception e
       (if (not= 404 (.getStatusCode e))
         (log/error e "Failed to get grid."))
       (make-grid hash)))))
 
+(defn write-s3-as-json [bucket-name key obj]
+  (let [json (json/write-str obj)
+        bytes (.getBytes json "UTF-8")
+        input-stream (java.io.ByteArrayInputStream. bytes)]
+    (s3/put-object
+      :bucket-name bucket-name
+      :key key
+      :input-stream input-stream
+      :metadata {
+        :content-type "application/json"
+        :content-length (count bytes)})))
+
 (defn write-grid-s3 [grid]
   (go
     (try
       (let [hash (:hash grid)
-            json (grid->json grid)
-            bytes (.getBytes json "UTF-8")
-            input-stream (java.io.ByteArrayInputStream. bytes)
-            response (s3/put-object :bucket-name grid-bucket
-                        :key (s3-key hash)
-                        :input-stream input-stream
-                        :metadata {
-                          :content-type "application/json"
-                          :content-length (count bytes)})]
+            response (write-s3-as-json grid-bucket (s3-key hash) grid)]
         {:ok response})
     (catch AmazonS3Exception e
       (log/error e "Failed to write grid")
@@ -204,9 +204,7 @@
                   winner (compare-and-set! dirty dold dnew)
                   _ (if winner (log/debug "Updating \"" _key "\""))]
               (if winner
-                (do
-                  (swap! grid-atom update :write-cnt incnil)
-                  (write-grid-s3 @grid-atom))))))))))
+                (write-grid-s3 @grid-atom)))))))))
 
 
 (defn make-grid-atom [g]
@@ -230,8 +228,8 @@
       (log/debug "Fetching hash from S3 " hash)
       (make-grid-atom (<! (fetch-grid-s3 hash))))))
 
-(defn handle-msg [msg]
-  (log/debug "handle-msg")
+(defn update-grids-with-msg [msg]
+  #_(log/debug "update-grids-with-msg")
   (let [lat (:lat msg)
         lon (:lon msg)]
     (vec (for [level (range 20)]

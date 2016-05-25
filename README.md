@@ -13,10 +13,13 @@
 - DONE - Web app renders rectangles in JSON: Loads from public S3 and plots lat/lon boxes
 - DONE - Support TTN message with plain text for testing (it already worked)
 - DONE - Accept ping messages that indicate an attempt to write from a location.
-- Post messages to SQS first thing so that we can handle bursts
-- Store raw messages to S3 (we'll want to replay them sometime)
-- Support requesting lower depth within Geobox
+- DONE - Post messages to SQS first thing
+- DONE - Store raw messages to S3 (we'll want to replay them sometime)
+- Drive grid updates from SQS
+- Support requesting lower depth within Geobox - client can then do higher resolution pass if desired
+- BUG - Zooming too quickly leads to undeleted rectangles
 - Write task that sends 1000's of messages
+- Support uploading CSV of existing data
 - Login with Firebase Authentication (or something else enabling Twitter, Facebook, Github, Google)
 - Deliver APP key for each user to use - may be revoked
 

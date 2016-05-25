@@ -26,7 +26,7 @@
           hash (grid-hash lat lon level)
           rchan (fetch-grid-s3 hash)
           grid (<!! rchan)]
-      (is (= grid {:level 2, :hash "EF", :cells {}})))))
+      (is (= grid {:level 2, :hash "EF", :cells {}, :write-cnt 0})))))
 
 (deftest write-grid-s3-test
   (testing "write grid"
@@ -79,7 +79,7 @@
     (let [hashes (grid-stack-hashes 27.0 45.0)]
       (is (= 20 (count hashes))))))
 
-(deftest handle-msg-test
+(deftest update-grids-with-msg-test
   (testing "Processing in response to a ttn message"
     (let [msg {
       :type "ttn"
@@ -88,7 +88,7 @@
       :rssi 1.0
       :lsnr 1.0
       }
-      results (map #(<!! %) (handle-msg msg))]
+      results (map #(<!! %) (update-grids-with-msg msg))]
       (is (= 20 (count results))
       (<!! (go (<! (timeout 45000))))))))
 

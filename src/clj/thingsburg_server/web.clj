@@ -13,6 +13,8 @@
             [thingsburg-server.grids :as grids]
             [thingsburg-server.data :as data]
             [clojurewerkz.machine-head.client :as mh]
+            [amazonica.aws.s3 :as s3]
+            [amazonica.aws.sqs :as sqs]
             [clj-time.core :as time]
             [clj-time.format :as time-format]
             [clojure.core.async
@@ -42,6 +44,17 @@
    :headers {"Content-Type" "application/json"}
    :body (json/write-str (mapv grids/s3-url (grids/view-grids lat1 lon1 lat2 lon2)) :escape-slash false)})
 
+(def message-queue (delay (sqs/find-queue "ThingsburgMessages")))
+
+(defn store-raw-msg [msg]
+  (grids/write-s3-as-json grids/raw-bucket (:aws-id msg) msg))
+
+(defn handle-msg [msg raw]
+  (let [sqs-msg (sqs/send-message @message-queue (prn-str msg))
+        msg (assoc msg :aws-id (:message-id sqs-msg))] ; Use sqs ID generally as unique ID
+    (store-raw-msg (assoc msg :raw-payload raw))
+    (grids/update-grids-with-msg msg)))
+
 (defn ttn-handler []
   (let [in (chan)]
     (go-loop []
@@ -51,16 +64,16 @@
           (let [ttn (data/ttn-string->clj ttn-string)
                 msg (data/ttn->msg ttn)]
             (log/debug "Converted to msg:" msg)
-            (grids/handle-msg msg))
+            (handle-msg msg ttn-string))
           (catch Exception e
             (log/error e "Failed handling TTN message")))
         (recur)))
     in))
 
-(defn ping-response [ping]
+(defn ping-response [ping req-body]
   (try
       (log/debug "Received ping-string" ping)
-      (grids/handle-msg ping)
+      (handle-msg ping req-body)
       {:status 201 ; HTTP "Created"
        :headers {"Content-Type" "application/json"}
        :body (json/write-str ping :escape-slash false)}
@@ -76,9 +89,8 @@
     (-> ips (clojure.string/split #",") first)
     (:remote-addr req)))
 
-(defn parse-ping-request [req]
-  (let [params (:params req)
-        slat (:latitude params (:lat params))
+(defn parse-ping-request [{params :params :as req}]
+  (let [slat (:latitude params (:lat params))
         lat (edn/read-string slat)
         slon (:longitude params (:lng params (:lon params)))
         lon (edn/read-string slon)]
@@ -101,7 +113,7 @@
   (POST "/api/v0/pings" req
     (let [[ping, error-msg] (parse-ping-request req)]
       (if ping
-        (ping-response ping)
+        (ping-response ping (prn-str (:params req)))
         (error-response 400 error-msg))))
   (ANY "*" []
        (route/not-found (slurp (io/resource "404.html")))))
