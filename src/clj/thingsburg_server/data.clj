@@ -13,7 +13,7 @@
   [ttn]
   (log/debug ttn)
   {
-    :ttn true
+    :type "ttn"
     :lat (get-in ttn [:payload :latitude])
     :lon (get-in ttn [:payload :longitude])
     :rssi (float (get-in ttn [:metadata 0 :rssi] 0))

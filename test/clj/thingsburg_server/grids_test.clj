@@ -61,15 +61,17 @@
             :hash hash
             :cells {}
           }
-          msg {:ttn true :lat lat :lon lon :rssi 2.2 :lsnr 1.3}
+          msg {:type "ttn" :lat lat :lon lon :rssi 2.2 :lsnr 1.3}
           updated (update-grid grid msg)
           updated-again (update-grid updated msg)]
       (is (some? updated))
-      (is (= (get-in updated [:cells chash :ok]) 1))
-      (is (= (get-in updated [:cells chash :pings]) 1))
+      (is (= (get-in updated [:cells chash :count]) 1))
+      (is (= (get-in updated [:cells chash :ttn-cnt]) 1))
+      (is (= (get-in updated [:cells chash :ping-cnt]) 0))
       (is (some? updated-again))
-      (is (= (get-in updated-again [:cells chash :ok]) 2))
-      (is (= (get-in updated-again [:cells chash :pings]) 2))
+      (is (= (get-in updated-again [:cells chash :count]) 2))
+      (is (= (get-in updated-again [:cells chash :ttn-cnt]) 2))
+      (is (= (get-in updated-again [:cells chash :ping-cnt]) 0))
       )))
 
 (deftest sample-update-test
@@ -80,7 +82,7 @@
 (deftest handle-msg-test
   (testing "Processing in response to a ttn message"
     (let [msg {
-      :ttn true
+      :type "ttn"
       :lat 35.0
       :lon 35.0
       :rssi 1.0
@@ -110,4 +112,4 @@
           lon2 10.0
           hashes (view-grids lat1 lon1 lat2 lon2)]
       (is (some? hashes))
-      (is (= hashes ["KFE" "KFB" "KFA" "K254" "KFB" "KFA" "K256" "KFB" "KFA"])))))
+      (is (= hashes ["KFE" "KFB" "KFA" "K254" "K251" "K250" "K256" "K253" "K252"])))))

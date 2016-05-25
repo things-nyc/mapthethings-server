@@ -36,7 +36,7 @@
       (< v min) (constrain min max (+ v step))
       (> v max) (constrain min max (- v step))
       :else v)))
-  
+
 (def normalize-lat (partial constrain -90.0 90.0))
 (def normalize-lon (partial constrain -180.0 180.0))
 
@@ -63,10 +63,11 @@
     (for [level (range 20)]
       (grid-hash-raw lat lon level))))
 
+(def incnil (fnil inc 0))
+
 (defn update-signals [cell msg]
   (let [rssi (:rssi msg)
         lsnr (:lsnr msg)
-        incnil (fnil inc 0)
         avgfn (fn [a x k] (+ a (/ (- x a) (incnil k)))) ; A + (x - A) / n
         qfn (fn [q x alast anew] (+ q (* (- x alast) (- x anew)))) ; Q + (x - Alast) * (x - Anew)
         ]
@@ -87,12 +88,16 @@
                 (assoc :lsnr-avg lsnr-avg-new)
                 (update :lsnr-q  qfn lsnr lsnr-avg-old lsnr-avg-new)
                 (#(assoc % :lsnr-std (Math/sqrt (/ (:lsnr-q %) (:lsnr-cnt %))))))))) ; sqrt(Q / n)
-      (:ttn msg) (update :ok incnil))))
+      )))
 
 (defn update-cell [cell msg]
-  (-> (update cell :pings (fnil inc 0))
-    ((fn [c] (if (:timestamp msg) (update c :timestamp (:timestamp msg)) c)))
-    (update-signals msg)))
+  (-> cell
+    (update :count incnil)
+    (update-signals msg)
+    (cond->
+      (= "ttn" (:type msg))   (update :ttn-cnt incnil)
+      (= "ping" (:type msg))  (update :ping-cnt incnil)
+      (:timestamp msg)        (assoc :timestamp (:timestamp msg)))))
 
 (defn make-cell [lat lon level]
   (let [geohash (cell-hash-raw lat lon level)
@@ -109,8 +114,9 @@
     :clat (.getLatitude center)
     :clon (.getLongitude center)
     ; x: x-index, y: y-index, // Position of this cell in the grid
-    :pings 0
-    :ok 0
+    :count 0
+    :ttn-cnt 0
+    :ping-cnt 0
     :rssi-avg 0.0
     :rssi-q 0.0
     :rssi-cnt 0
@@ -190,7 +196,7 @@
       ; Mark atom dirty - needs saving
       (let [{write :write} (swap! dirty update :count inc)]
         (go
-          (log/debug "Waiting to update \"" _key "\"")
+          #_(log/debug "Waiting to update \"" _key "\"")
           (<! (timeout 30000))
           (if (= write (:write @dirty)) ; Same past write frame
             (let [dold @dirty
@@ -198,7 +204,10 @@
                   winner (compare-and-set! dirty dold dnew)
                   _ (if winner (log/debug "Updating \"" _key "\""))]
               (if winner
-                (write-grid-s3 @grid-atom)))))))))
+                (do
+                  (swap! grid-atom update :write-cnt incnil)
+                  (write-grid-s3 @grid-atom))))))))))
+
 
 (defn make-grid-atom [g]
   (let [hash (:hash g)
@@ -227,11 +236,11 @@
         lon (:lon msg)]
     (vec (for [level (range 20)]
       (go
-        (log/debug "Handle msg " lat " x " lon " at level " level)
+        #_(log/debug "Handle msg " lat " x " lon " at level " level)
         (let [hash (grid-hash lat lon level)
-              _ (log/debug "Hash: " hash)
+              #_(log/debug "Hash: " hash)
               grid-atom (<! (fetch-grid hash))
-              _ (log/debug "Fetched grid-atom" grid-atom)]
+              #_(log/debug "Fetched grid-atom" grid-atom)]
           (swap! grid-atom update-grid msg)))))))
 
 (defn generate-view-grids [lat lon x-count y-count level]

@@ -13,6 +13,8 @@
             [thingsburg-server.grids :as grids]
             [thingsburg-server.data :as data]
             [clojurewerkz.machine-head.client :as mh]
+            [clj-time.core :as time]
+            [clj-time.format :as time-format]
             [clojure.core.async
              :as async
              :refer [>! <! >!! <!! go go-loop chan buffer close! thread
@@ -20,10 +22,20 @@
   (:import [ch.hsr.geohash GeoHash])
   (:gen-class))
 
+(def current-timestamp
+  (let [f (time-format/formatters :date-time)]
+    (fn []
+      (time-format/unparse f (time/now)))))
+
 (defn splash []
   {:status 200
    :headers {"Content-Type" "text/html"}
    :body (slurp (io/resource "map.html"))})
+
+(defn error-response [code msg]
+ {:status code
+  :headers {"Content-Type" "text/plain"}
+  :body msg})
 
 (defn view-grids-response [lat1 lon1 lat2 lon2]
   {:status 200
@@ -43,32 +55,54 @@
           (catch Exception e
             (log/error e "Failed handling TTN message")))
         (recur)))
-      ; (close! in) TODO
     in))
 
-(defn ping-handler []
-  (let [in (chan)]
-    (go-loop []
-      (when-let [ping (<! in)]
-        (try
-          (log/debug "Received ping-string" ping)
-          (let []
-            (grids/handle-msg ping))
-          (catch Exception e
-            (log/error e "Failed handling ping.")))
-        (recur)))
-      ; (close! in) TODO
-    in))
+(defn ping-response [ping]
+  (try
+      (log/debug "Received ping-string" ping)
+      (grids/handle-msg ping)
+      {:status 201 ; HTTP "Created"
+       :headers {"Content-Type" "application/json"}
+       :body (json/write-str ping :escape-slash false)}
+    (catch Exception e
+      (let [error-msg (format "Failed to handle ping [%s]." (str ping))]
+        (log/error e error-msg)
+        (error-response 500 error-msg)))))
+
+(defn get-client-ip
+  "http://stackoverflow.com/a/30022208/1207583"
+  [req]
+  (if-let [ips (get-in req [:headers "x-forwarded-for"])]
+    (-> ips (clojure.string/split #",") first)
+    (:remote-addr req)))
+
+(defn parse-ping-request [req]
+  (let [params (:params req)
+        slat (:latitude params (:lat params))
+        lat (edn/read-string slat)
+        slon (:longitude params (:lng params (:lon params)))
+        lon (edn/read-string slon)]
+    (if (or (nil? lat) (nil? lon))
+      [nil, (format "Invalid ping lat/lon: %s/%s" slat slon)]
+      [{
+        :type "ping"
+        :lat lat :lon lon
+        :timestamp (or (:timestamp params) (current-timestamp))
+        :msgid (:msgid params)
+        :appkey (:appkey params)
+        :client-ip (get-client-ip req)
+      }, nil])))
 
 (defroutes routes
   (GET "/" [] (splash))
-  (GET "/api/v0/refs/:lat1/:lon1/:lat2/:lon2"
+  (GET "/api/v0/grids/:lat1/:lon1/:lat2/:lon2"
     [lat1 lon1 lat2 lon2 :as request]
     (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
-  (POST "/inbound-email-mime"
-    ;curl --form param1=value1 --form Return-Path=value2 http://localhost:5000/inbound-email-mime
-    {{inbound-chan :inbound-chan} :services :as request}
-    #_(handler request inbound-chan))
+  (POST "/api/v0/pings" req
+    (let [[ping, error-msg] (parse-ping-request req)]
+      (if ping
+        (ping-response ping)
+        (error-response 400 error-msg))))
   (ANY "*" []
        (route/not-found (slurp (io/resource "404.html")))))
 
@@ -87,9 +121,10 @@
 
   ([services]
   (let [ic (:inbound-chan services)
-        services (if ic services (assoc services :inbound-chan (ping-handler)))]
+        ;services (if ic services (assoc services :inbound-chan (ping-handler)))
+        ]
     (-> routes
-      (wrap-services services)
+      ;(wrap-services services)
       (wrap-defaults api-defaults)
       #_(wrap-log-request)))))
 

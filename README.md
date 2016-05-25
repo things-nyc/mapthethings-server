@@ -9,11 +9,13 @@
 ## TODO
 - DONE - Subscribe to TTN MQQT broker at staging.thethingsnetwork.org:1883
 - DONE - Update global hierarchy of grids
-- Store raw messages to S3 (we'll want to replay them sometime)
 - DONE - API serves list of URL's covering Geobox
+- DONE - Web app renders rectangles in JSON: Loads from public S3 and plots lat/lon boxes
+- DONE - Support TTN message with plain text for testing (it already worked)
+- DONE - Accept ping messages that indicate an attempt to write from a location.
+- Post messages to SQS first thing so that we can handle bursts
+- Store raw messages to S3 (we'll want to replay them sometime)
 - Support requesting lower depth within Geobox
-- Support TTN message with plain text for testing
-- Web app renders rectangles in JSON: Loads from public S3 and plots lat/lon boxes
 - Write task that sends 1000's of messages
 - Login with Firebase Authentication (or something else enabling Twitter, Facebook, Github, Google)
 - Deliver APP key for each user to use - may be revoked
@@ -72,7 +74,7 @@ $ heroku local web
   altitude: Z.Z
   timestamp: T
 }
-- GET /api/v0/refs/Lat1/Lon1/Lat2/Lon2 - Get list of URL's where grid data is available
+- GET /api/v0/grids/Lat1/Lon1/Lat2/Lon2 - Get list of URL's where grid data is available
 {
   refs: [
     ["http://s3.amazonaws.com/Thingsburg/..."]  // Cover box with single grid - 1k cells

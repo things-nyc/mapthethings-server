@@ -42,7 +42,7 @@
     var lat1 = bounds.getNorth()
     var lat2 = bounds.getSouth()
     $("#boundsid").text("Bounds: [" + lat1 + ", " + lon1 + "], [" + lat2 + ", " + lon2 + "]")
-    var apiurl = "/api/v0/refs/" + lat1 + "/" + lon1 + "/" + lat2  + "/" + lon2
+    var apiurl = "/api/v0/grids/" + lat1 + "/" + lon1 + "/" + lat2  + "/" + lon2
     $.getJSON(apiurl, function( data ) {
       console.log(data)
       var polygons = [];

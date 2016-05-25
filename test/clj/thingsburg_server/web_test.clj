@@ -7,56 +7,23 @@
             [ring.mock.request :refer :all]
             [thingsburg-server.web :refer :all]))
 
-(deftest splash-test
-  (testing "splash endpoint"
+(deftest main-page-test
+  (testing "main page"
     (let [app (make-app)
           response (app (request :get "/"))]
       (is (= 200 (:status response)))
-      (is (= "Welcome to Thingsburg!" (:body response))))))
+      (is (.contains (:body response) "var mymap = L.map('mapid')")))))
 
 (deftest view-grids-test
   (testing "view grids endpoint"
     (let [app (make-app)
-          response (app (request :get "/api/v0/refs/10.0/10.0/8.0/12.0"))]
+          response (app (request :get "/api/v0/grids/10.0/10.0/8.0/12.0"))]
       (is (= 200 (:status response)))
-      (is (= "[\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/B70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/A70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/F60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/4D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/B70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/A70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/F60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/6D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/B70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/A70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/F60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E60CQ-v0\"]" (:body response))))))
+      (is (= "[\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/B70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/A70CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/F60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/E60CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/4D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/1D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/0D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/5C0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/4C0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/6D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/3D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/2D0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/7C0CQ-v0\",\"https://s3.amazonaws.com/com.futurose.thingsburg.grids/6C0CQ-v0\"]" (:body response))))))
 
-#_(deftest inbound-email
-  (testing "inbound email endpoint"
-    (let [email {
-            "sender" "initiator@email.com"
-            "Return-Path" "<initiator@email.com>"
-            "recipient" "r@req.futurose.com"
-            "Subject" "Request for Information"
-            "body-plain" "Text plain"
-            "body-html" "<html><body><p>This is HTML paragraph.</p></body></html>"
-          }
-          ic (chan 1)
-          app (make-app {:inbound-chan ic})
-          req (request :post "/inbound-email" email)
-          response (app req)]
-      (is (= 200 (:status response)))
-      (is (= "" (:body response)))
-      (let [inmail (<!! ic)]
-        (is (= "initiator@email.com" (:sender inmail))))
-      (close! ic))))
-
-#_(deftest inbound-email-mime
-  (testing "inbound email endpoint"
-    (let [email {
-            "sender" "initiator@email.com"
-            "Return-Path" "<initiator@email.com>"
-            "recipient" "r@req.futurose.com"
-            "Subject" "Request for Information"
-            "body-mime" (slurp "test/mail-files/simple-email2.mime")
-          }
-          ic (chan 1)
-          app (make-app {:inbound-chan ic})
-          req (request :post "/inbound-email-mime" email)
-          response (app req)]
-      (is (= 200 (:status response)))
-      (is (= "" (:body response)))
-      (let [inmail (<!! ic)]
-        #_(log/debug (str inmail))
-        (is (= "initiator@email.com" (:sender inmail))))
-      (close! ic))))
+(deftest ping-test
+  (testing "ping endpoint"
+    (let [app (make-app)
+          response (app (request :post "/api/v0/pings" {"lat" 40.0 "lon" -74.0 "timestamp" "2016-05-25T15:30:26.713Z"}))]
+      (is (= 201 (:status response)))
+      (is (= "{\"type\":\"ping\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msgid\":null,\"appkey\":null,\"client-ip\":\"localhost\"}" (:body response))))))

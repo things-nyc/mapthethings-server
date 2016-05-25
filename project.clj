@@ -26,6 +26,7 @@
                  [prismatic/dommy "1.1.0"]
                  [clojurewerkz/machine_head "1.0.0-beta9"]
                  [amazonica "0.3.57"]
+                 [clj-time "0.11.0"]
                  ;[com.amazonaws.geo/dynamodb-geo "1.0.0"]
                  ]
   :min-lein-version "2.0.0"
