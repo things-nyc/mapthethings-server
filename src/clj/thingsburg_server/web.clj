@@ -44,7 +44,9 @@
    :headers {"Content-Type" "application/json"}
    :body (json/write-str (mapv grids/s3-url (grids/view-grids lat1 lon1 lat2 lon2)) :escape-slash false)})
 
-(def message-queue (delay (sqs/find-queue "ThingsburgMessages")))
+(def messages-queue-name (or (env :messages-queue-name) "ThingsburgMessages"))
+
+(def message-queue (delay (sqs/find-queue messages-queue-name)))
 
 (defn store-raw-msg [msg]
   (grids/write-s3-as-json grids/raw-bucket (:aws-id msg) msg))
