@@ -35,7 +35,17 @@
     loadGrids(bounds)
   })
 
-  var markers = null
+  var markers = null;
+  var removeMarkers = function (m) {
+    if (m!=null) {
+      window.setTimeout(function () {
+        console.log("Removing markers from Map")
+        $.each( m, function( i, p ) {
+          mymap.removeLayer(p)
+        })
+      }, 500)
+    }
+  }
   var loadGrids = function (bounds) {
     var lon1 = bounds.getWest()
     var lon2 = bounds.getEast()
@@ -63,17 +73,8 @@
           })
         })
       })
-      if (markers!=null) {
-        console.log("Removing markers from Map")
-        $.each( markers, function( i, p ) {
-          mymap.removeLayer(p)
-        })
-        //mymap.removeLayer(mymap)
-      }
-      //markers = L.multiPolygon(polygons)
-      markers = polygons
-      //console.log(markers)
-      //markers.addTo(mymap);
+      removeMarkers(markers)
+      markers = polygons;
     })
   }
   loadGrids(mymap.getBounds())
