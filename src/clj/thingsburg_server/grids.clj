@@ -230,7 +230,7 @@
       (for [x (range x-count)
             y (range y-count)]
         (let [geo (if (zero? x) start ((apply comp (repeat x #(.getEasternNeighbour %))) start))
-              geo (if (zero? y) geo ((apply comp (repeat y #(.getSouthernNeighbour %))) start))]
+              geo (if (zero? y) geo ((apply comp (repeat y #(.getSouthernNeighbour %))) geo))]
           (geohash-to-string geo))))))
 
 (defn view-grids
