@@ -20,7 +20,7 @@
             [clojure.core.async
              :as async
              :refer [>! <! >!! <!! go go-loop chan buffer close! thread
-                     alts! alts!! timeout]])
+                     alts! alts!! timeout merge]])
   (:import [ch.hsr.geohash GeoHash])
   (:gen-class))
 
@@ -48,14 +48,63 @@
 
 (def message-queue (delay (sqs/find-queue messages-queue-name)))
 
-(defn store-raw-msg [msg]
-  (grids/write-s3-as-json grids/raw-bucket (:aws-id msg) msg))
+(defn store-raw-msg [msg-id msg]
+  (grids/write-s3-as-json grids/raw-bucket msg-id (assoc msg :aws-id msg-id)))
 
 (defn handle-msg [msg raw]
-  (let [sqs-msg (sqs/send-message @message-queue (prn-str msg))
-        msg (assoc msg :aws-id (:message-id sqs-msg))] ; Use sqs ID generally as unique ID
-    (store-raw-msg (assoc msg :raw-payload raw))
-    (grids/update-grids-with-msg msg)))
+  (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw})))
+
+(defn wait-all
+  "Waits for all channels and timeout in msecs. Returns true if timed out."
+  [channels wait-msecs]
+  (let [tc (timeout wait-msecs)]
+    (<!! (go-loop [channels (conj channels tc)]
+      (if (= 1 (count channels))
+        false ; We got to 1 without hitting timeout!
+        (let [[_ c] (alts! (vec channels))]
+          (if (identical? c tc)
+            true
+            (recur (remove #(identical? % c) channels)))))))))
+
+(defn process-sqs-msg [{msg-id :message-id body-string :body :as sqs-msg}]
+  ; {
+  ;   :attributes {
+  ;     :ApproximateFirstReceiveTimestamp "1464711665873",
+  ;     :SentTimestamp "1464661271995",
+  ;     :ApproximateReceiveCount "1",
+  ;     :SenderId "AIDAJSWP24JQK6WQFWTLE"
+  ;   },
+  ;   :message-id "904b266a-8ec7-4ef5-a646-44affa26dfc9",
+  ;   :receipt-handle "AQEBhIISGic7lgQnlLhkGf66JmIAvNDBiAM1KqM7sOCyo1n1mEE4ZCG7OE71IefvpN/XOFaZmslz+GbmwYoHWfCjq8VpYivTl2LfZTq/WpZPpmWBlJQ3VsTRX6XPrTPkAhCwrXD9fhrElfmR9XTuEyqB/zSPE/KE7poS5hWWuc31UgfmYhgtsAwMki5bIQWxIxqilai/R1ep59U3KD7hz3TpbFD5oGXw2WVJWnyDFowkrJ3xQ2lW5tWRlw8isNXO/XxRLH4XkYxUJxwW5mnuRzX2w/HQY7/EtysTr2Rq9mypNLA3llBWa1b0zjv33QKDuLtTb0VmjXVHLcTqMSQD66btTTuDJintejEq0yyL7tmokTgwIGoMxsnzwLImme7rT2LoZU3IeRQ1B1UESpRbXgWTqg==",
+  ;   :body "{:type \"ping\", :lat 40.756697, :lon -74.03635, :timestamp \"2016-05-23T14:26:11.399644707Z\", :rssi -17, :lsnr 12.2, :msgid nil, :appkey nil}\n",
+  ;   :md5of-body "f02e18460d467c04c9dd6527aca26e92"
+  ; }
+  (let [body (edn/read-string body-string)
+        msg (:msg body)
+        msg (assoc msg :aws-id msg-id)] ; Use sqs ID generally as unique ID
+    ; Wait for storing raw message in S3 and updating of grids
+    (if (wait-all (conj (grids/update-grids-with-msg msg)
+                    (store-raw-msg msg-id body)) 10000)
+      (log/warn "Failed to process message within 10 seconds")
+      (do
+        (log/debug "Deleting message" msg-id)
+        (sqs/delete-message (assoc sqs-msg :queue-url @message-queue))))))
+
+(defn sqs-handler []
+  (log/info "Starting SQS handler listening to" (str @message-queue))
+  (go-loop []
+    (let [msgs (sqs/receive-message :queue-url @message-queue
+                     :wait-time-seconds 10
+                     :max-number-of-messages 10
+                     :delete false
+                     :attribute-names ["All"])
+          msgs (:messages msgs)]
+      (doseq [msg msgs]
+        (try
+          (process-sqs-msg msg)
+          (catch Exception e
+            (log/error e (str "Failed processing SQS message"  (:message-id msg)))))))
+      (recur)))
 
 (defn ttn-handler []
   (let [in (chan)]
@@ -165,7 +214,8 @@
 
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 5000))
-        app (make-app)]
+        app (make-app)
+        sqs-channel (sqs-handler)]
     (log/info "Binding to:" (str port))
     (connect-to-ttn)
     (jetty/run-jetty app {:port port :join? false})))

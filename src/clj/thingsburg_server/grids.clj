@@ -166,23 +166,25 @@
         (log/error e "Failed to get grid."))
       (make-grid hash)))))
 
-(defn write-s3-as-json [bucket-name key obj]
+(defn write-s3-as-json
+  "Returns a channel that contains the result of the S3 put operation."
+  [bucket-name key obj]
   (let [json (json/write-str obj)
         bytes (.getBytes json "UTF-8")
         input-stream (java.io.ByteArrayInputStream. bytes)]
-    (s3/put-object
+    (go (s3/put-object
       :bucket-name bucket-name
       :key key
       :input-stream input-stream
       :metadata {
         :content-type "application/json"
-        :content-length (count bytes)})))
+        :content-length (count bytes)}))))
 
 (defn write-grid-s3 [grid]
   (go
     (try
       (let [hash (:hash grid)
-            response (write-s3-as-json grid-bucket (s3-key hash) grid)]
+            response (<! (write-s3-as-json grid-bucket (s3-key hash) grid))]
         {:ok response})
     (catch AmazonS3Exception e
       (log/error e "Failed to write grid")
@@ -202,7 +204,7 @@
             (let [dold @dirty
                   dnew (assoc dold :write (:count dold))
                   winner (compare-and-set! dirty dold dnew)
-                  _ (if winner (log/debug "Updating \"" _key "\""))]
+                  _ (if winner (log/debug "Writing grid to S3" _key))]
               (if winner
                 (write-grid-s3 @grid-atom)))))))))
 
@@ -234,21 +236,29 @@
       (dosync (alter GridCache cache/hit hash))
       (go grid-atom))
     (go
-      (log/debug "Fetching grid from S3" hash)
+      (log/debug "Reading grid from S3" hash)
       (make-grid-atom (<! (fetch-grid-s3 hash))))))
 
-(defn update-grids-with-msg [msg]
+(defn update-grids-with-msg
+  "Returns a vector of channels"
+  [msg]
   #_(log/debug "update-grids-with-msg")
   (let [lat (:lat msg)
         lon (:lon msg)]
     (vec (for [level (range 20)]
       (go
-        #_(log/debug "Handle msg " lat " x " lon " at level " level)
-        (let [hash (grid-hash lat lon level)
-              #_(log/debug "Hash: " hash)
-              grid-atom (<! (fetch-grid hash))
-              #_(log/debug "Fetched grid-atom" grid-atom)]
-          (swap! grid-atom update-grid msg)))))))
+        (try
+          #_(log/debug "Handle msg " lat " x " lon " at level " level)
+          (let [hash (grid-hash lat lon level)
+                #_(log/debug "Hash: " hash)
+                grid-atom (<! (fetch-grid hash))
+                #_(log/debug "Fetched grid-atom" grid-atom)]
+            (swap! grid-atom update-grid msg)
+            (log/debug "Updated grid" hash)
+            hash)
+          (catch Exception e
+            (log/error e)
+            e)))))))
 
 (defn generate-view-grids [lat lon x-count y-count level]
   (vec
@@ -262,9 +272,9 @@
 (defn view-grids
   "Return a set of hashes representing grids that would cover view"
   ([lat1 lon1 lat2 lon2]
-    (view-grids lat1 lon1 lat2 lon2 0))
+    (view-grids lat1 lon1 lat2 lon2 6))
 
-  ([lat1 lon1 lat2 lon2 depth]
+  ([lat1 lon1 lat2 lon2 max-grid-count]
   (loop [level 20]
     (if (zero? level)
       [(grid-hash lat1 lon1 level)]
@@ -287,6 +297,6 @@
             x-count (inc (int (/ (Math/abs (- rlon llon)) box-width)))
             ]
         #_(log/debug "x-count" x-count ", y-count" y-count)
-        (if (<= x-count 4)
+        (if (and (<= x-count max-grid-count) (<= y-count max-grid-count))
           (generate-view-grids lat1 lon1 x-count y-count level)
           (recur (dec level))))))))

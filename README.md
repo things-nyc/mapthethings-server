@@ -1,9 +1,9 @@
 
-# Thingsburg-Server
+# MapTheThings-Server
 
-- Handle message from Thingsburg devices routed via TTN.
-- Serve single page Thingsburg Web app that shows coverage
-- Serve data to Thingsburg Web app - different resolution depending on zoom
+- Handle message from MapTheThings devices (nodes) routed via TTN.
+- Serve single page MapTheThings Web app that shows coverage
+- Serve data to MapTheThings Web app - different resolution depending on zoom
 - Generate summary of GIS data at multiple scales to support API
 
 ## TODO
@@ -17,7 +17,9 @@
 - DONE - Store raw messages to S3 (we'll want to replay them sometime)
 - DONE - Import JSON array of samples
 - DONE - BUG - Zooming too quickly leads to undeleted rectangles
-- Drive grid updates from SQS
+- DONE - Drive grid updates from SQS
+- Ensure that once a grid has dropped out of the cache, the version loaded from S3 is the latest.
+- Support partitioning grid update work
 - Support requesting lower depth within Geobox - client can then do higher resolution pass if desired
 - Write task that sends 1000's of messages
 - Support uploading CSV of existing data
