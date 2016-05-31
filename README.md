@@ -15,7 +15,8 @@
 - DONE - Accept ping messages that indicate an attempt to write from a location.
 - DONE - Post messages to SQS first thing
 - DONE - Store raw messages to S3 (we'll want to replay them sometime)
-- FIXED - Zooming too quickly leads to undeleted rectangles
+- DONE - Import JSON array of samples
+- DONE - BUG - Zooming too quickly leads to undeleted rectangles
 - Drive grid updates from SQS
 - Support requesting lower depth within Geobox - client can then do higher resolution pass if desired
 - Write task that sends 1000's of messages

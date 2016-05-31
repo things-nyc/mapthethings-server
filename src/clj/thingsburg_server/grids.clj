@@ -134,7 +134,7 @@
       (update-in grid [:cells ch] update-cell msg)
       (assoc-in grid [:cells ch] (update-cell (make-cell lat lon level) msg)))))
 
-(def GridCache (atom (cache/->LUCache {} {} (or (edn/read-string (env :grid-cache-size)) 2000))))
+(def GridCache (ref (cache/->LUCache {} {} (or (edn/read-string (env :grid-cache-size)) 2000))))
 #_(cache/evict C :b)
 
 (defn json->grid [json-grid]
@@ -210,9 +210,18 @@
 (defn make-grid-atom [g]
   (let [hash (:hash g)
         grid-atom (atom g)]
-    (add-watch grid-atom hash (make-grid-watcher))
-    (swap! GridCache cache/miss hash grid-atom)
-    grid-atom))
+    (add-watch grid-atom hash (make-grid-watcher)) ; Do this work outside of sync
+    (let [ga (dosync
+              (if-let [cached-atom (cache/lookup @GridCache hash nil)]
+                cached-atom ; Somebody beat us. Great!
+                (do
+                  (alter GridCache cache/miss hash grid-atom)
+                  grid-atom)))]
+      ; Postpone logging until after sync block
+      (if (identical? ga grid-atom)
+        (log/debug "GridCache miss:" hash)
+        (log/debug "GridCache hit (late):" hash)) ;
+      ga)))
 
 (defn fetch-grid
   "Fetches a grid from cache or S3.
@@ -221,11 +230,11 @@
   (if-let [grid-atom (cache/lookup @GridCache hash nil)]
     (do ; Found in cache. Mark hit and push through channel.
       (if (not= hash (:hash @grid-atom)) (throw (Exception. (format "Hash key [%s] does not match hash of returned grid [%]." hash (:hash @grid-atom)))))
-      (log/debug "Found grid atom for hash " hash " in cache!")
-      (swap! GridCache cache/hit hash)
+      (log/debug "GridCache hit:" hash)
+      (dosync (alter GridCache cache/hit hash))
       (go grid-atom))
     (go
-      (log/debug "Fetching hash from S3 " hash)
+      (log/debug "Fetching grid from S3" hash)
       (make-grid-atom (<! (fetch-grid-s3 hash))))))
 
 (defn update-grids-with-msg [msg]
