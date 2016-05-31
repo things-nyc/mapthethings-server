@@ -1,6 +1,5 @@
 (ns thingsburg-server.data
-  (:require [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
-            [compojure.route :as route]
+  (:require [clojure.edn :as edn]
             [clojure.data.codec.base64 :as b64]
             [clojure.tools.logging :as log]
             [clojure.java.io :as io]
@@ -28,3 +27,17 @@
 (defn ttn-string->clj [json-string]
   (-> (json/read-str json-string :key-fn keyword)
     (update :payload decode-payload)))
+
+(defn parse-lat [s]
+  (if-let [north (fnext (re-matches #"([\.\d]+)[Nn]" s))]
+    (edn/read-string north)
+    (if-let [south (fnext (re-matches #"([\.\d]+)[Ss]" s))]
+      (- (edn/read-string south))
+      (edn/read-string s))))
+
+(defn parse-lon [s]
+  (if-let [east (fnext (re-matches #"([\.\d]+)[Ee]" s))]
+    (edn/read-string east)
+    (if-let [west (fnext (re-matches #"([\.\d]+)[Ww]" s))]
+      (- (edn/read-string west))
+      (edn/read-string s))))

@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Thingsburg</title>
+  <title>Map The Things Network</title>
   <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
   <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
   <script src="https://code.jquery.com/jquery-2.2.4.min.js"
@@ -13,9 +13,41 @@
   </style>
 </head>
 <body>
-  <h2>Welcome to Thingsburg</h2>
+  <h1>Map The Things Network</h1>
+  <h3>Open project to build a coverage map for
+    <a href="http://thethingsnetwork.org">The Things Network</a></h3>
   <div id="mapid"></div>
   <div id="boundsid">Bounds: </div>
+  <h2>Collecting Data</h2>
+  <p>We want your data in whatever way it is available.
+    We'll build out different ways to submit as we go.</p>
+  <h3>1. Map The Things - App &amp; Node (Pending)</h3>
+  <p>Use the Map The Things
+  <a href="http://github.com/things-nyc/mapthethings-ios">iOS app</a> and
+  <a href="http://github.com/things-nyc/mapthethings-node">hardware node</a>
+  to submit coverage samples.</p>
+  <p>You start the node and start the app and then
+    move around the coverage area, either as part of a specific data gathering
+    mission or just a normal day's wandering. The app will track both successful
+    and unsuccessful transmissions via TTN, thereby distinguishing between
+    untested areas and those that have been tested and found wanting.</p>
+  <h3>2. Custom Nodes</h3>
+  <p>You are welcome to create your own nodes and use them to
+  transmit GPS coordinates to the Map The Things server.</p>
+  <ul>
+    <li>AppSKey:&nbsp;<code>430D53B272A647AF5DFF6A167AB79A20</code></li>
+    <li>NwkSKey:&nbsp;<code>804243642C1E3B04366D36C3909FCAA2</code></li>
+    <li>Data:&nbsp;Send text strings of the form
+      <code>{"lat":40.7128,"lng":-74.0059}</code> or just
+      <code>40.7128,-74.0059</code></li>
+  </ul>
+  <h3>3. Upload Data</h3>
+  <p>If you want to upload existing map data, submit a pull request with your
+  data in a reasonable format (CSV, JSON, XML, YAML, EDN) in the
+  <a href="http://github.com/things-nyc/mapthethings/data">project/data</a>
+  directory. Make certain to include GPS coordinates, RSSI and SNR values
+  for successful TTN messages. Samples missing RSSI or SNR indicate failed
+  transmissions.</p>
   <script>
   var newyork = [40.7128, -74.0059]
   var dataloc = [20.0, 20.0]
@@ -78,11 +110,6 @@
     })
   }
   loadGrids(mymap.getBounds())
-    //
-    // $( "<ul/>", {
-    //   "class": "my-new-list",
-    //   html: items.join( "" )
-    // }).appendTo( "body" );
   </script>
 </body>
 </html>

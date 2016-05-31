@@ -93,9 +93,9 @@
 
 (defn parse-ping-request [{params :params :as req}]
   (let [slat (:latitude params (:lat params))
-        lat (edn/read-string slat)
+        lat (data/parse-lat slat)
         slon (:longitude params (:lng params (:lon params)))
-        lon (edn/read-string slon)]
+        lon (data/parse-lon slon)]
     (if (or (nil? lat) (nil? lon))
       [nil, (format "Invalid ping lat/lon: %s/%s" slat slon)]
       [{
