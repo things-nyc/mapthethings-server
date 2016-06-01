@@ -1,12 +1,55 @@
 
 # MapTheThings-Server
 
-- Handle message from MapTheThings devices (nodes) routed via TTN.
+The server portion of MapTheThings, the project whose goal is to create a
+global coverage map for The Things Network (TTN).
+
+## Server Responsibilities
+- Handle messages from MapTheThings devices (nodes) routed via TTN.
+- Handle messages from mobile apps indicating failed message attempts.
+- Import coverage data submitted by the global user base.
+- Generate summary of GIS data at multiple scales to support map display
 - Serve single page MapTheThings Web app that shows coverage
 - Serve data to MapTheThings Web app - different resolution depending on zoom
-- Generate summary of GIS data at multiple scales to support API
 
-## TODO
+## Contributing Data
+
+1. MapTheThings - App & Node (Pending)
+  Use the Map The Things [iOS app](http://github.com/things-nyc/mapthethings-ios)
+  and [hardware node](http://github.com/things-nyc/mapthethings-node)
+  to submit coverage samples.
+
+2. Custom Nodes
+  You are welcome to create your own TTN nodes and use them to
+  transmit GPS coordinates to the Map The Things server.</p>
+   - AppSKey: ```430D53B272A647AF5DFF6A167AB79A20```
+   - NwkSKey: ```804243642C1E3B04366D36C3909FCAA2```
+   - Data: Send text strings of the form
+      ```{"lat":40.7128,"lng":-74.0059}```
+      or just
+      ```40.7128,-74.0059```
+
+3. Upload Data
+  If you want to upload existing map data, submit a pull request with your
+  data in a reasonable format (CSV, JSON, XML, YAML, EDN) in the
+  [project/data](http://github.com/things-nyc/mapthethings/data)
+  directory. Make certain to include GPS coordinates, RSSI and SNR values
+  for successful TTN messages. Samples missing RSSI or SNR indicate failed
+  transmissions.
+
+## Contributing Code
+This is a current work in progress as of Summer 2016. We welcome pull requests.
+
+### TODO
+- Support partitioning grid update work
+- Ensure that once a grid has dropped out of the cache, the version loaded from S3 is the latest.
+- Support requesting lower depth within Geobox - client can then do higher resolution pass if desired
+- Write task that sends 1000's of messages
+- Support uploading CSV of existing data
+- Login with Firebase Authentication (or something else enabling Twitter, Facebook, Github, Google)
+- Deliver APP key for each user to use - may be revoked
+
+### DONE
 - DONE - Subscribe to TTN MQQT broker at staging.thethingsnetwork.org:1883
 - DONE - Update global hierarchy of grids
 - DONE - API serves list of URL's covering Geobox
@@ -18,109 +61,36 @@
 - DONE - Import JSON array of samples
 - DONE - BUG - Zooming too quickly leads to undeleted rectangles
 - DONE - Drive grid updates from SQS
-- Ensure that once a grid has dropped out of the cache, the version loaded from S3 is the latest.
-- Support partitioning grid update work
-- Support requesting lower depth within Geobox - client can then do higher resolution pass if desired
-- Write task that sends 1000's of messages
-- Support uploading CSV of existing data
-- Login with Firebase Authentication (or something else enabling Twitter, Facebook, Github, Google)
-- Deliver APP key for each user to use - may be revoked
 
-## Running Locally
+## Hosting
+The server is hosted on Heroku and uses Amazon S3 and SQS for storage and queuing.
 
-```sh
-$ env `cat .env` lein repl
-user=> (require 'thingsburg-server.web)
-user=>(def server (thingsburg-server.web/-main))
+## Implementation
+
+### Geohashing
+Use https://github.com/kungfoo/geohash-java to perform Geo hashing.
+Internally we use a modified hash that captures the number of significant bits
+followed by a hex formatting of hash. (geohash.org uses character encoding that
+supports encoding only multiples of 5 significant bits.)
+
+```
+LevelCode = 0-63 significant bit count mapped to characters A-Za-z0-9_:
+HexHash = Hash significant value formatted as hex string
+Hash = [LevelCode][HexHash]
 ```
 
-```sh
-$ heroku local web
-```
-
-## API
-- MQTT message
-{
-  "payload":"{ // b64 encoded
-    "msgid": "[UNIQUE_MSG_ID]",
-    "appkey": "[THINGSBURG_APP_KEY]",
-    "longitude":25.0,
-    "latitude":25.0
-  }",
-  "port":1,
-  "counter":4,
-  "dev_eui":"00000000DEADBEEF",
-  "metadata":[
-    {
-      "frequency":865.4516,
-      "datarate":"SF9BW125",
-      "codingrate":"4/8",
-      "gateway_timestamp":1,
-      "gateway_time":"2016-05-22T06:05:38.645444008Z",
-      "channel":0,
-      "server_time":"2016-05-22T06:05:38.681605388Z",
-      "rssi":-5,
-      "lsnr":5.3,
-      "rfchain":0,
-      "crc":0,
-      "modulation":"LoRa",
-      "gateway_eui":"0102030405060708",
-      "altitude":0,
-      "longitude":0,
-      "latitude":0
-    }
-  ]
-}
-- PUT /api/v0/pings - Write that an attempt was made
-{
-  appkey: [Thingsburg App Key] // Connects this API call to a particular user.
-  msgid: [Unique ID for this message] // Used to link ping attempt with TTN message
-  latitude: X.X
-  longitude: Y.Y
-  altitude: Z.Z
-  timestamp: T
-}
-- GET /api/v0/grids/Lat1/Lon1/Lat2/Lon2 - Get list of URL's where grid data is available
-{
-  refs: [
-    ["http://s3.amazonaws.com/Thingsburg/..."]  // Cover box with single grid - 1k cells
-    ["", "", "", ""]                            // Cover box with 4 grids - 4k cells
-    ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ] // Cover box with 16 grids - 16k cells
-  ]
-}
-- GET [Cell url]
-{
-  cells: [
-    {
-      center: hash,
-      width: Xmax, height: Ymax,
-      lat1: X.X, lon1: X.X,
-      lat2: X.X, lon2: X.X,
-      x: x-index, y: y-index, // Position of this cell in the grid
-      varq: Q, // Running intermediate variable. std-dev = sqrt(Q / N)
-      rssi-avg: X, // Running calc as A https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
-      rssi-std: X,
-      pings: N,
-      ok: N,
-    },
-  ],
-  lookup: { // Give X Y index in grid, what index in cells array above. -1 if none.
-    "X,Y": cells-index,
-  }
-}
-
-## S3 Geohashing
-A world quadrants
-Each level is 32x32 grid, 1024 max samples
-Level0 - -180:180 Longitude, -90:90 Latitude - A single grid
-Level1 - -180:0/-90:0, 0:180/-90:0, -180:0/0:90, 0:180/0:90 - World in 4 grids
+Level1 - 1 grid, A0, -180:180 Longitude, -90:90 Latitude
+Level2 - 4 grids, C0, C1, C2, C3
 LevelN - 4^N separate grids
-Level20 - Grid with 32x32 cells, each of which is ~1 foot square
-Level25 - ~1 foot squares covering Earth
+Level20 - Smallest grid we use
 
-Keys are of the form: /Grids/[ReverseHash]/Level
+Each grid record represents a 32x32 grid of cells contained within it.
+Sample data is summarized within each cell. Loading a single grid supplies
+a front end with up to 1024 cells to show.
+In a level 20 grid, the cells are about ~1 foot "square".
 
-Keys are of the form: /Raw/[hash]-[MsgID]
+Grid storage keys on S3 are of the form: ```[reverse(Hash)]-[Version]```.
+We reverse the hash in order to enable S3 to partition the table more efficiently.
 
 ### Algorithm
 - For each sample arriving in queue
@@ -129,13 +99,12 @@ Keys are of the form: /Raw/[hash]-[MsgID]
 --- Load from cache or S3
 --- Update value for cell containing sample
 -- Remove sample from queue
-- For each updated grid
--- If after no further updates in 30 second, write grid
--- If oldest unsaved update is 60 seconds old, write grid
+- For each updated grid, write back to S3 after 30 seconds
+- Use cache to avoid loading grids from S3
 
-## Message flow
+### Message flow
 - Message arrives
 - Parse and dispatch to receive channel
 - Receive channel listeners include
--- Logger - log received message
+-- S3 Logger - log received message
 -- SQS Writer - write to SQS
