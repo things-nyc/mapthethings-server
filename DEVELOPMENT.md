@@ -93,3 +93,45 @@ $ heroku local web
     "X,Y": cells-index,
   }
 }
+
+## Geohashing
+Use https://github.com/kungfoo/geohash-java to perform Geo hashing.
+Internally we use a modified hash that captures the number of significant bits
+followed by a hex formatting of hash. (geohash.org uses character encoding that
+supports encoding only multiples of 5 significant bits.)
+
+```
+LevelCode = 0-63 significant bit count mapped to characters A-Za-z0-9_:
+HexHash = Hash significant value formatted as hex string
+Hash = [LevelCode][HexHash]
+```
+
+Level1 - 1 grid, A0, -180:180 Longitude, -90:90 Latitude
+Level2 - 4 grids, C0, C1, C2, C3
+LevelN - 4^N separate grids
+Level20 - Smallest grid we use
+
+Each grid record represents a 32x32 grid of cells contained within it.
+Sample data is summarized within each cell. Loading a single grid supplies
+a front end with up to 1024 cells to show.
+In a level 20 grid, the cells are about ~1 foot "square".
+
+Grid storage keys on S3 are of the form: ```[reverse(Hash)]-[Version]```.
+We reverse the hash in order to enable S3 to partition the table more efficiently.
+
+## Algorithm
+- For each sample arriving in queue
+  - Store in raw record
+  - For each of 20 containing grids 0, 2, 4, 6, etc bits of hash
+    - Load from cache or S3
+    - Update value for cell containing sample
+  - Remove sample from queue
+- For each updated grid, write back to S3 after 30 seconds
+- Use cache to avoid loading grids from S3
+
+## Message flow
+- Message arrives
+- Parse and dispatch to receive channel
+- Receive channel listeners include
+-- S3 Logger - log received message
+-- SQS Writer - write to SQS
