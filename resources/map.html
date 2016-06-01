@@ -12,7 +12,7 @@
     #mapid { height: 500px; }
   </style>
 </head>
-<body>
+<body onload="javascript:moveToUrlCoordinates();">
   <h1>Map The Things Network</h1>
   <h3>Open project to build a coverage map for
     <a href="http://thethingsnetwork.org">The Things Network</a></h3>
@@ -63,13 +63,13 @@
   //recenter() // Don't center map immediately, because browser pops up for permission
 
   var newyork = [40.7128, -74.0059]
-  var dataloc = [20.0, 20.0]
-  var mymap = L.map('mapid').setView(newyork, 13);
+  var world = [20, 0]
+  var mymap = L.map('mapid')
 
   //L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
   L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
       attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
-      maxZoom: 18,
+      maxZoom: 19,
       id: 'mapbox.mapbox-streets-v4',
       //accessToken: 'pk.eyJ1IjoiZnJhbmtsZW9ucm9zZSIsImEiOiJjaW9sbm5pcWEwMXFwdjRqYjRmNHgxZ2s1In0.tk3zEksdrebcG4_KKUAL4Q'
   }).addTo(mymap);
@@ -108,12 +108,19 @@
       }, 500)
     }
   }
+  function roundCoord(v) {
+    return Math.round((v + 0.00001) * 10000) / 10000
+  }
   var loadGrids = function (bounds) {
-    var lon1 = bounds.getWest()
-    var lon2 = bounds.getEast()
-    var lat1 = bounds.getNorth()
-    var lat2 = bounds.getSouth()
+    var lon1 = roundCoord(bounds.getWest())
+    var lon2 = roundCoord(bounds.getEast())
+    var lat1 = roundCoord(bounds.getNorth())
+    var lat2 = roundCoord(bounds.getSouth())
     $("#boundsid").text("Bounds: [" + lat1 + ", " + lon1 + "], [" + lat2 + ", " + lon2 + "]")
+
+    var c = bounds.getCenter()
+    window.location.hash = "" + roundCoord(c.lat) + "," + roundCoord(c.lng) + "," + mymap._zoom
+
     var apiurl = "/api/v0/grids/" + lat1 + "/" + lon1 + "/" + lat2  + "/" + lon2
     $.getJSON(apiurl, function( data ) {
       console.log(data)
@@ -134,7 +141,23 @@
       markers = polygons;
     })
   }
-  loadGrids(mymap.getBounds())
+
+  function moveToUrlCoordinates() {
+    var parsed = /#(-?\d+(\.\d+)?),(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)$/.exec(window.location.hash || "");
+    if (parsed) {
+      console.log(parsed)
+      var lat = parsed[1]
+      var lng = parsed[3]
+      var zoom = parsed[5]
+      mymap.setView([lat, lng], zoom);
+    }
+    else {
+      mymap.setView(world, 2);
+    }
+    loadGrids(mymap.getBounds())
+  }
+
+  window.onhashchange = moveToUrlCoordinates;
   </script>
 </body>
 </html>
