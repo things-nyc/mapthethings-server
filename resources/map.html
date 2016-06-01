@@ -17,6 +17,7 @@
   <h3>Open project to build a coverage map for
     <a href="http://thethingsnetwork.org">The Things Network</a></h3>
   <div id="mapid"></div>
+  <input type="button" onclick="javascript:recenter();" value="Show Local"/>
   <div id="boundsid">Bounds: </div>
   <h2>Collecting Data</h2>
   <p>We want your data in whatever way it is available.
@@ -49,6 +50,18 @@
   for successful TTN messages. Samples missing RSSI or SNR indicate failed
   transmissions.</p>
   <script>
+  function gotPosition(pos) {
+    var crd = pos.coords;
+    mymap.setView([crd.latitude, crd.longitude], 13);
+  };
+  function errPosition(err) {
+    console.warn('ERROR(' + err.code + '): ' + err.message);
+  };
+  function recenter() {
+    navigator.geolocation.getCurrentPosition(gotPosition, errPosition);
+  }
+  //recenter() // Don't center map immediately, because browser pops up for permission
+
   var newyork = [40.7128, -74.0059]
   var dataloc = [20.0, 20.0]
   var mymap = L.map('mapid').setView(newyork, 13);
