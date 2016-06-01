@@ -136,26 +136,36 @@
 
     lastBounds = boundsString
     $("#boundsid").text(boundsString)
-    console.log("Load grids for " + boundsString)
+    // console.log("Load grids for " + boundsString)
 
     var apiurl = "/api/v0/grids/" + lat1 + "/" + lon1 + "/" + lat2  + "/" + lon2
     $.getJSON(apiurl, function( data ) {
-      console.log(data)
-      var polygons = [];
-      //data = ["https://s3.amazonaws.com/com.futurose.thingsburg.grids/0E70E703e-v0"]
-      $.each( data, function( i, url ) {
-        $.getJSON( url, function( grid ) {
-          console.log("Grid loaded from: " + url)
-          console.log(grid)
+      //data = ["https://s3.amazonaws.com/nyc.thethings.map.grids/0E70E703e-v0"]
+      var grids = $.map( data, function( url ) {
+        var d = $.Deferred()
+        $.getJSON(url).then(function(x) {
+          d.resolve(x)
+        }, function (err) {
+          d.resolve({cells: {}}) // Swallow error - mostly 404's
+        })
+        return d.promise()
+      })
+      $.when.apply($, grids).then(function() {
+        var polygons = [];
+        var grids = Array.from(arguments);
+        $.each(grids, function( gi, grid ) {
           $.each( grid.cells, function (key, cell) {
             var marker = makeMarker(cell)
             marker.addTo(mymap)
             polygons.push(marker)
           })
         })
+        // Right before losing reference to markers, we remove them.
+        removeMarkers(markers)
+        markers = polygons;
+      }, function () {
+        console.error("Error loading grid")
       })
-      removeMarkers(markers)
-      markers = polygons;
     })
   }
 
