@@ -39,6 +39,7 @@ global coverage map for The Things Network (TTN).
 This is a current work in progress as of Summer 2016. We welcome pull requests.
 
 ### TODO
+- Support "lat,lng" TTN messages
 - Support partitioning grid update work
 - Ensure that once a grid has dropped out of the cache, the version loaded from S3 is the latest.
 - Support requesting lower depth within Geobox - client can then do higher resolution pass if desired
