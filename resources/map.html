@@ -92,17 +92,18 @@
   })
 
   var makeMarker = function (cell) {
-    var marker = L.polygon([
-        [cell.lat1, cell.lon1],
-        [cell.lat2, cell.lon1],
-        [cell.lat2, cell.lon2],
-        [cell.lat1, cell.lon2]
-    ])
-    // var marker = L.circle([cell.clat, cell.clon], 500, {
-    //   color: 'blue',
-    //   fillColor: '#33F',
-    //   fillOpacity: 0.5
-    //   })
+    // var marker = L.polygon([
+    //     [cell.lat1, cell.lon1],
+    //     [cell.lat2, cell.lon1],
+    //     [cell.lat2, cell.lon2],
+    //     [cell.lat1, cell.lon2]
+    // ])
+    var marker = L.circleMarker([cell.clat, cell.clon], {
+      stroke: false,
+      color: 'blue',
+      fillColor: '#33F',
+      fillOpacity: 0.5
+      })
 
     marker.bindPopup("TTN Messages: " + cell["rssi-cnt"]);
 
