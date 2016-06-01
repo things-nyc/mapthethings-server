@@ -20,7 +20,7 @@
             [clojure.core.async
              :as async
              :refer [>! <! >!! <!! go go-loop chan buffer close! thread
-                     alts! alts!! timeout merge]])
+                     alts! alts!! timeout]])
   (:import [ch.hsr.geohash GeoHash])
   (:gen-class))
 
@@ -90,14 +90,34 @@
         (log/debug "Deleting message" msg-id)
         (sqs/delete-message (assoc sqs-msg :queue-url @message-queue))))))
 
+(defn retry-fn [f delay msg]
+  (fn [& args]
+    (loop []
+      (let [[v e]
+        (try
+          [(apply f args) nil]
+        (catch Exception e
+          (log/error e msg)
+          (<!! (timeout delay))
+          [nil e]))]
+        (if (some? e)
+          (recur)
+          v)))))
+
+(def receive-messages
+  (retry-fn
+    #(sqs/receive-message
+      :queue-url @message-queue
+      :wait-time-seconds 10
+      :max-number-of-messages 10
+      :delete false
+      :attribute-names ["All"])
+    5000 "Error receiving SQS messages"))
+
 (defn sqs-handler []
   (log/info "Starting SQS handler listening to" (str @message-queue))
   (go-loop []
-    (let [msgs (sqs/receive-message :queue-url @message-queue
-                     :wait-time-seconds 10
-                     :max-number-of-messages 10
-                     :delete false
-                     :attribute-names ["All"])
+    (let [msgs (receive-messages)
           msgs (:messages msgs)]
       (doseq [msg msgs]
         (try

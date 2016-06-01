@@ -29,7 +29,7 @@
 ## Running Locally
 
 ```sh
-$ lein repl
+$ env `cat .env` lein repl
 user=> (require 'thingsburg-server.web)
 user=>(def server (thingsburg-server.web/-main))
 ```
