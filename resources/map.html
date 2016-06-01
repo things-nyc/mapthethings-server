@@ -14,7 +14,7 @@
 </head>
 <body onload="javascript:moveToUrlCoordinates();">
   <h1>Map The Things Network</h1>
-  <h3>Open project to build a coverage map for
+  <h3>Creating a global coverage map for
     <a href="http://thethingsnetwork.org">The Things Network</a></h3>
   <div id="mapid"></div>
   <input type="button" onclick="javascript:recenter();" value="Show Local"/>
@@ -65,6 +65,9 @@
   var newyork = [40.7128, -74.0059]
   var world = [20, 0]
   var mymap = L.map('mapid')
+  var lastBounds = ""
+  var lastSetUrlHash = "-"
+  var ignoreBoundsChange = false
 
   //L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
   L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
@@ -75,9 +78,17 @@
   }).addTo(mymap);
 
   mymap.on('moveend', function (e) {
-    console.log("Bounds changed")
+    if (ignoreBoundsChange) {
+      console.log("Skipping map move event handler")
+      return
+    }
+    // console.log("Bounds changed")
     var bounds = mymap.getBounds();
-    loadGrids(bounds)
+    var c = bounds.getCenter()
+
+    lastSetUrlHash = "#" + roundCoord(c.lat) + "," + roundCoord(c.lng) + "," + mymap._zoom
+    // console.log("Setting hash URL coordinates: " + lastSetUrlHash)
+    window.location.hash = lastSetUrlHash
   })
 
   var makeMarker = function (cell) {
@@ -101,7 +112,7 @@
   var removeMarkers = function (m) {
     if (m!=null) {
       window.setTimeout(function () {
-        console.log("Removing markers from Map")
+        console.log("Removing " + $(m).length + " markers from Map")
         $.each( m, function( i, p ) {
           mymap.removeLayer(p)
         })
@@ -109,17 +120,23 @@
     }
   }
   function roundCoord(v) {
-    return Math.round((v + 0.00001) * 10000) / 10000
+    return Math.round((v + 0.000001) * 10000) / 10000
   }
   var loadGrids = function (bounds) {
     var lon1 = roundCoord(bounds.getWest())
     var lon2 = roundCoord(bounds.getEast())
     var lat1 = roundCoord(bounds.getNorth())
     var lat2 = roundCoord(bounds.getSouth())
-    $("#boundsid").text("Bounds: [" + lat1 + ", " + lon1 + "], [" + lat2 + ", " + lon2 + "]")
+    var boundsString = "Bounds: [" + lat1 + ", " + lon1 + "], [" + lat2 + ", " + lon2 + "]"
 
-    var c = bounds.getCenter()
-    window.location.hash = "" + roundCoord(c.lat) + "," + roundCoord(c.lng) + "," + mymap._zoom
+    if (lastBounds==boundsString) {
+      console.log("Skipping reload of bounds")
+      return // We've already done it.
+    }
+
+    lastBounds = boundsString
+    $("#boundsid").text(boundsString)
+    console.log("Load grids for " + boundsString)
 
     var apiurl = "/api/v0/grids/" + lat1 + "/" + lon1 + "/" + lat2  + "/" + lon2
     $.getJSON(apiurl, function( data ) {
@@ -142,17 +159,33 @@
     })
   }
 
+  function setMapView(loc, zoom) {
+    try {
+      ignoreBoundsChange = true
+      mymap.setView(loc, zoom);
+    }
+    finally {
+      ignoreBoundsChange = false
+    }
+  }
+
   function moveToUrlCoordinates() {
-    var parsed = /#(-?\d+(\.\d+)?),(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)$/.exec(window.location.hash || "");
-    if (parsed) {
-      console.log(parsed)
-      var lat = parsed[1]
-      var lng = parsed[3]
-      var zoom = parsed[5]
-      mymap.setView([lat, lng], zoom);
+    if (window.location.hash==lastSetUrlHash) {
+      console.log("Ignoring unchanged hash")
     }
     else {
-      mymap.setView(world, 2);
+      console.log("Moving to URL coordinates: " + window.location.hash)
+      var parsed = /#(-?\d+(\.\d+)?),(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)$/.exec(window.location.hash || "");
+      if (parsed) {
+        //console.log(parsed)
+        var lat = Number(parsed[1])
+        var lng = Number(parsed[3])
+        var zoom = Number(parsed[5])
+        setMapView([lat, lng], zoom)
+      }
+      else {
+        setMapView(world, 2);
+      }
     }
     loadGrids(mymap.getBounds())
   }
