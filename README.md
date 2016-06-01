@@ -1,7 +1,7 @@
 
 # MapTheThings-Server
 
-The server portion of MapTheThings, the project whose goal is to create a
+The server portion of [MapTheThings](http://map.thethings.nyc), the 
 global coverage map for The Things Network (TTN).
 
 ## Server Responsibilities
