@@ -17,9 +17,9 @@
                      alts! alts!! timeout]])
   (:import [java.io Reader]))
 
-(defn post-data [data]
+(defn post-data [data api-key]
   (doseq [[msg raw] data]
-    (post/handle-msg msg raw)))
+    (post/handle-msg (assoc msg :api-key api-key) raw)))
 
 (defn lat-lon
   "Extract lat/lon from sample."
@@ -57,8 +57,11 @@
       (throw (Exception. "Cannot handle JSON map"))
       (map parse-sample (seq arr)))))
 
-(defn -main [& [filename]]
-  (let []
-    (log/info "Importing:" filename)
-    (post-data (parse-file filename))
-    (<!! (go (<! (timeout 45000))))))
+(defn -main [& [filename api-key]]
+  (cond
+    (or (nil? filename) (string/blank? filename)) (log/error "Filename required")
+    (or (nil? api-key) (string/blank? api-key)) (log/error "API key required")
+    :else (do
+      (log/info "Importing:" filename)
+      (post-data (parse-file filename) api-key)
+      (<!! (go (<! (timeout 45000)))))))
