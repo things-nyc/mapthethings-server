@@ -138,6 +138,12 @@
 
     marker.bindPopup(
       "TTN Messages: " + cell.count +
+      (cell.count>0 ?
+        "<br/>" +
+        (cell["ttn-cnt"]>0 ? " Received: " + cell["ttn-cnt"]: "") +
+        (cell["api-cnt"]>0 ? " API: " + cell["api-cnt"]: "") +
+        (cell["import-cnt"]>0 ? " Imported: " + cell["import-cnt"]: "")
+        : "") +
       (attempts>0 ?
         "<br/>Packet loss: " + roundStat(100 * (1 - (successes / attempts))) + "(" + failed + "/" + attempts + ")"
         : "") +
