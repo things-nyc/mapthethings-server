@@ -4,14 +4,14 @@
 
 Create your .env file with the following settings:
 ```
-AWS_ACCESS_KEY=[Your access key]
-AWS_SECRET_KEY=[Your secret key]
-TTN_APP_EUI=[Your TTN app EUI]
-TTN_ACCESS_PASSWORD=[Your TTN access password]
+AWS_ACCESS_KEY=[AWS identity access key]
+AWS_SECRET_KEY=[AWS identity secret key]
+TTN_APP_EUI=[TTN app EUI]
+TTN_ACCESS_PASSWORD=[TTN access password]
 GRID_CACHE_SIZE=4000
-MESSAGES_BUCKET_NAME=[Your S3 bucket name for raw messages]
-GRIDS_BUCKET_NAME=[Your S3 bucket name for grids]
-MESSAGES_QUEUE_NAME=[Your SQS queue name]
+MESSAGES_BUCKET_NAME=[S3 bucket name for raw messages]
+GRIDS_BUCKET_NAME=[S3 bucket name for grids]
+MESSAGES_QUEUE_NAME=[SQS queue name]
 ```
 
 ```sh
@@ -22,77 +22,114 @@ $ env `cat .env` lein run
 $ heroku local web
 ```
 
+## AWS Configuration
+### S3 Grids bucket
+- Create bucket.
+- Add permission for Everyone to List the bucket
+- Add permission for your AWS identity to write to the bucket, either by
+  specific permission or policy on the bucket, or in the IAM console by
+  enabling the identity full access to S3.
+- Add a policy to the bucket that enables anonymous access to its contents
+  ```
+  {
+  	"Version": "2012-10-17",
+  	"Statement": [
+  		{
+  			"Sid": "AddPerm",
+  			"Effect": "Allow",
+  			"Principal": "*",
+  			"Action": "s3:GetObject",
+  			"Resource": "arn:aws:s3:::[BUCKET NAME]/*"
+  		}
+  	]
+  }
+  ```
+- Add CORS like the following to enable the web app to load cross site from S3
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+      <CORSRule>
+          <AllowedOrigin>http://[APP HOSTNAME]</AllowedOrigin>
+          <AllowedMethod>GET</AllowedMethod>
+          <MaxAgeSeconds>3000</MaxAgeSeconds>
+          <AllowedHeader>*</AllowedHeader>
+      </CORSRule>
+      <CORSRule>
+          <AllowedOrigin>http://localhost:5000</AllowedOrigin>
+          <AllowedMethod>GET</AllowedMethod>
+          <MaxAgeSeconds>3000</MaxAgeSeconds>
+          <AllowedHeader>*</AllowedHeader>
+      </CORSRule>
+  </CORSConfiguration>
+  ```
+
+### S3 Messages bucket
+- Create bucket.
+- Add permission for your AWS identity to write to the bucket, either by
+  specific permission or policy on the bucket, or in the IAM console by
+  enabling the identity full access to S3.
+- Since this is for private use by the app, there's no need for the extra
+  Policy or CORS configuration.
+
+### SQS Queues
+- Create an SQS queue
+- Optionally, reduce the maximum message size
+  to 20k or lower, because messages should be small (< 1k) and lowering the
+  limit will cause a noticable failure should a large message come through.
+  A large message might indicate that someone is abusing the API.
+- Optionally, set the receive message wait time to something longer than 0
+  seconds in order to have the opportunity to reduce slightly the number of
+  requests to SQS.
+- Create a similarly configured Dead Letter queue and configure the first queue
+  to send failed messages to it.
+
 ## API
 - MQTT message
-{
-  "payload":"{ // b64 encoded
-    "msgid": "[UNIQUE_MSG_ID]",
-    "appkey": "[THINGSBURG_APP_KEY]",
-    "longitude":25.0,
-    "latitude":25.0
-  }",
-  "port":1,
-  "counter":4,
-  "dev_eui":"00000000DEADBEEF",
-  "metadata":[
-    {
-      "frequency":865.4516,
-      "datarate":"SF9BW125",
-      "codingrate":"4/8",
-      "gateway_timestamp":1,
-      "gateway_time":"2016-05-22T06:05:38.645444008Z",
-      "channel":0,
-      "server_time":"2016-05-22T06:05:38.681605388Z",
-      "rssi":-5,
-      "lsnr":5.3,
-      "rfchain":0,
-      "crc":0,
-      "modulation":"LoRa",
-      "gateway_eui":"0102030405060708",
-      "altitude":0,
-      "longitude":0,
-      "latitude":0
-    }
-  ]
-}
+Bytes representing UTF-8 encoded string that contains either JSON
+  ```
+  {
+  ```
 - PUT /api/v0/pings - Write that an attempt was made
-{
-  appkey: [MapTheThings App Key] // Connects this API call to a particular user.
-  msg_seq: [Sequence number for this message] // Used to link ping attempt with TTN message
-  dev_eui: "00000000DEADBEEF" // Combined with msg_seq to create unique ID
-  latitude: X.X
-  longitude: Y.Y
-  altitude: Z.Z
-  timestamp: 2016-05-22T06:05:38.681605388Z
-}
-- GET /api/v0/grids/Lat1/Lon1/Lat2/Lon2 - Get list of URL's where grid data is available
-{
-  refs: [
-    ["http://s3.amazonaws.com/nyc.thethings.map.grids/..."]  // Cover box with single grid - 1k cells
-    ["", "", "", ""]                            // Cover box with 4 grids - 4k cells
-    ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ] // Cover box with 16 grids - 16k cells
-  ]
-}
-- GET [S3 grid url]
-{
-  cells: [
-    {
-      center: hash,
-      width: Xmax, height: Ymax,
-      lat1: X.X, lon1: X.X,
-      lat2: X.X, lon2: X.X,
-      x: x-index, y: y-index, // Position of this cell in the grid
-      varq: Q, // Running intermediate variable. std-dev = sqrt(Q / N)
-      rssi-avg: X, // Running calc as A https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
-      rssi-std: X,
-      pings: N,
-      ok: N,
-    },
-  ],
-  lookup: { // Give X Y index in grid, what index in cells array above. -1 if none.
-    "X,Y": cells-index,
+  ```
+  {
+    appkey: [MapTheThings App Key] // Connects this API call to a particular user.
+    msg_seq: [Sequence number for this message] // Used to link ping attempt with TTN message
+    dev_eui: "00000000DEADBEEF" // Combined with msg_seq to create unique ID
+    latitude: X.X
+    longitude: Y.Y
+    altitude: Z.Z
+    timestamp: 2016-05-22T06:05:38.681605388Z
   }
-}
+  ```
+- GET /api/v0/grids/Lat1/Lon1/Lat2/Lon2 - Get list of URL's where grid data is available
+  ```
+  {
+    refs: [
+      ["http://s3.amazonaws.com/nyc.thethings.map.grids/..."]  // Cover box with single grid - 1k cells
+      ["", "", "", ""]                            // Cover box with 4 grids - 4k cells
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ] // Cover box with 16 grids - 16k cells
+    ]
+  }
+  ```
+- GET [S3 grid url]
+  ```
+  {
+    cells: {
+      cell-hash: {
+        center: hash,
+        width: Xmax, height: Ymax,
+        lat1: X.X, lon1: X.X,
+        lat2: X.X, lon2: X.X,
+        x: x-index, y: y-index, // Position of this cell in the grid
+        varq: Q, // Running intermediate variable. std-dev = sqrt(Q / N)
+        rssi-avg: X, // Running calc as A https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
+        rssi-std: X,
+        pings: N,
+        ok: N,
+      },
+    }
+  }
+  ```
 
 ## Geohashing
 Use https://github.com/kungfoo/geohash-java to perform Geo hashing.
@@ -120,18 +157,18 @@ Grid storage keys on S3 are of the form: ```[reverse(Hash)]-[Version]```.
 We reverse the hash in order to enable S3 to partition the table more efficiently.
 
 ## Algorithm
+Server listens via TTN subscription (MQTT) and HTTP server.
+- Message arrives via TTN or HTTP POST or import logic
+- Parse and validate - on error return failure to submitter, if possible.
+- Post EDN formatted message to SQS work queue containing
+  ```{msg: {parsed}, :raw {input}}```
+
+Separately, SQS worker reads batches of 10 messages and processes them.
 - For each sample arriving in queue
-  - Store in raw record
+  - Store incoming sample in parsed and raw form into S3 "messages" bucket.
+    Useful for replaying entire data set when we figure out we did summary wrong.
   - For each of 20 containing grids 0, 2, 4, 6, etc bits of hash
     - Load from cache or S3
     - Update value for cell containing sample
   - Remove sample from queue
 - For each updated grid, write back to S3 after 30 seconds
-- Use cache to avoid loading grids from S3
-
-## Message flow
-- Message arrives
-- Parse and dispatch to receive channel
-- Receive channel listeners include
--- S3 Logger - log received message
--- SQS Writer - write to SQS

@@ -24,6 +24,38 @@
         json-string (String. bytes)]
     (json/read-str json-string :key-fn keyword)))
 
+; Format of message from TTN
+; {
+;   "payload":"{ // b64 encoded bytes, which in our case are UTF-8 encoding of string
+;     "longitude":25.0,
+;     "latitude":25.0
+;   }",
+;   "port":1,
+;   "counter":4,
+;   "dev_eui":"00000000DEADBEEF",
+;   "metadata":[
+;     {
+;       "frequency":865.4516,
+;       "datarate":"SF9BW125",
+;       "codingrate":"4/8",
+;       "gateway_timestamp":1,
+;       "gateway_time":"2016-05-22T06:05:38.645444008Z",
+;       "channel":0,
+;       "server_time":"2016-05-22T06:05:38.681605388Z",
+;       "rssi":-5,
+;       "lsnr":5.3,
+;       "rfchain":0,
+;       "crc":0,
+;       "modulation":"LoRa",
+;       "gateway_eui":"0102030405060708",
+;       "altitude":0,
+;       "longitude":0,
+;       "latitude":0
+;     },
+;     Repeated metadata for each copy of message received by different gateways
+;   ]
+; }
+
 (defn ttn-string->clj [json-string]
   (-> (json/read-str json-string :key-fn keyword)
     (update :payload decode-payload)))

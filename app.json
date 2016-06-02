@@ -1,6 +1,21 @@
 {
-  "name": "Thingsburg Server",
-  "description": "Server parts of Thingsburg application.",
+  "name": "MapTheThings Server",
+  "description": "Server parts of MapTheThings application.",
+  "keywords": [
+    "map",
+    "coverage",
+    "iot",
+    "TheThingsNetwork",
+    "TheThingsNYC"
+  ],
+  "website": "https://map.thethings.nyc/",
+  "repository": "https://github.com/thethingsnyc/mapthethings-server",
   "image": "heroku/clojure",
-  "addons": [ "heroku-postgresql" ]
+  "addons": [],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "Standard-1X"
+    }
+  },
 }
