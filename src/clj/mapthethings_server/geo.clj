@@ -1,8 +1,5 @@
 (ns mapthethings-server.geo
-  (:require [hickory.core :as hickory]
-            [hickory.render :refer [hickory-to-html]]
-            [hickory.select :as select]
-            [environ.core :refer [env]])
+  (:require [environ.core :refer [env]])
   (:import [com.amazonaws.auth BasicAWSCredentials]
            [com.amazonaws.services.dynamodbv2 AmazonDynamoDBClient]
            [com.amazonaws.services.dynamodbv2.model CreateTableRequest ProvisionedThroughput ResourceInUseException]

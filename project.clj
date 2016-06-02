@@ -17,9 +17,7 @@
                  [compojure "1.4.0"]
                  [ring/ring-jetty-adapter "1.4.0"]
                  [ring/ring-defaults "0.2.0"]
-                 [nilenso/mailgun "0.1.0-SNAPSHOT"]
                  [environ "1.0.3"]
-                 [hickory "0.6.0"]
                  [org.clojure/data.codec "0.1.0"]
                  ;;ClojureScript
                  [org.clojure/clojurescript "1.7.122"]
