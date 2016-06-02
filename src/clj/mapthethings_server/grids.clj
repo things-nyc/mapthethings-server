@@ -72,11 +72,14 @@
 
 (defn update-cell [cell msg]
   (-> cell
-    (update :count incnil)
     (update-signals msg)
     (cond->
-      (= "ttn" (:type msg))   (update :ttn-cnt incnil)
-      (= "ping" (:type msg))  (update :ping-cnt incnil)
+      (not= "attempt" (:type msg)) (update :count incnil)
+      (= "ttn" (:type msg))     (update :ttn-cnt incnil)
+      (= "api" (:type msg))     (update :api-cnt incnil)
+      (= "import" (:type msg))  (update :import-cnt incnil)
+      (= "attempt" (:type msg)) (update :attempt-cnt incnil)
+      (:tracked msg)            (update :success-cnt incnil)
       (:timestamp msg)        (assoc :timestamp (:timestamp msg)))))
 
 (defn make-cell [lat lon level]
@@ -96,7 +99,10 @@
     ; x: x-index, y: y-index, // Position of this cell in the grid
     :count 0
     :ttn-cnt 0
-    :ping-cnt 0
+    :api-cnt 0
+    :import-cnt 0
+    :attempt-cnt 0
+    :success-cnt 0
     :rssi {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}
     :lsnr {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}
     }))

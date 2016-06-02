@@ -39,7 +39,7 @@
     (if (or (nil? lat) (nil? lon))
       [nil, (format "Invalid sample lat/lon: %s" (string/join "," (map #(str (% sample)) [:gps :coordinates :coords :latitude :lat :longitude :lon :lng])))]
       [{
-        :type "ping"
+        :type "import"
         :lat lat :lon lon
         :timestamp (or (:timestamp sample) (:time sample))
         :rssi (:rssi sample)

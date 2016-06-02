@@ -98,14 +98,53 @@
     //     [cell.lat2, cell.lon2],
     //     [cell.lat1, cell.lon2]
     // ])
+    // SNR (dBm): -20 (Red) -11 (Orange) -4 (Green)
+    var snr = cell.lsnr.avg
+    var signal_color = 'red'
+    if (cell.lsnr.cnt==0) {
+      signal_color = 'gray'
+    }
+    else if (snr>=-4) {
+      signal_color = 'green'
+    }
+    else if (snr>=-11) {
+      signal_color = 'orange'
+    }
+    var attempts = cell["attemp-cnt"]
+    var successes = cell["success-cnt"]
+    if (attempts<successes) {
+      successes = attempts
+    }
+    var failed = (attempts - successes)
+    var pct_color = 'gray' // No attempt tracking data, so no packet loss pct
+    if (attempts>0) {
+      var pct = successes / attempts // % of samples successful TTN messages?
+      if (pct>0.95) {
+        pct_color = 'green'
+      }
+      else if (pct>0.75) {
+        pct_color = 'orange'
+      }
+      else {
+        pct_color = 'red'
+      }
+    }
     var marker = L.circleMarker([cell.clat, cell.clon], {
-      stroke: false,
-      color: 'blue',
-      fillColor: '#33F',
-      fillOpacity: 0.5
+      stroke: true,
+      color: signal_color,
+      fillColor: pct_color,
+      fillOpacity: 0.6
       })
 
-    marker.bindPopup("TTN Messages: " + cell.rssi.cnt);
+    marker.bindPopup(
+      "TTN Messages: " + cell.count +
+      (attempts>0 ?
+        "<br/>Packet loss: " + roundStat(100 * (1 - (successes / attempts))) + "(" + failed + "/" + attempts + ")"
+        : "") +
+      (cell.count>0 ?
+        "<br/>SNR: " + roundStat(cell.lsnr.avg) + " (sd: " + roundStat(cell.lsnr.std) + ")" +
+        "<br/>RSSI: " + roundStat(cell.rssi.avg) + " (sd: " + roundStat(cell.rssi.std) + ")"
+        : ""));
 
     return marker
   }
@@ -122,6 +161,9 @@
   }
   function roundCoord(v) {
     return Math.round((v + 0.000001) * 10000) / 10000
+  }
+  function roundStat(v) {
+    return Math.round((v + 0.0001) * 100) / 100
   }
   var loadGrids = function (bounds) {
     var lon1 = roundCoord(bounds.getWest())

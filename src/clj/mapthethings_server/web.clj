@@ -76,7 +76,7 @@
   ;   },
   ;   :message-id "904b266a-8ec7-4ef5-a646-44affa26dfc9",
   ;   :receipt-handle "AQEBhIISGic7lgQnlLhkGf66JmIAvNDBiAM1KqM7sOCyo1n1mEE4ZCG7OE71IefvpN/XOFaZmslz+GbmwYoHWfCjq8VpYivTl2LfZTq/WpZPpmWBlJQ3VsTRX6XPrTPkAhCwrXD9fhrElfmR9XTuEyqB/zSPE/KE7poS5hWWuc31UgfmYhgtsAwMki5bIQWxIxqilai/R1ep59U3KD7hz3TpbFD5oGXw2WVJWnyDFowkrJ3xQ2lW5tWRlw8isNXO/XxRLH4XkYxUJxwW5mnuRzX2w/HQY7/EtysTr2Rq9mypNLA3llBWa1b0zjv33QKDuLtTb0VmjXVHLcTqMSQD66btTTuDJintejEq0yyL7tmokTgwIGoMxsnzwLImme7rT2LoZU3IeRQ1B1UESpRbXgWTqg==",
-  ;   :body "{:type \"ping\", :lat 40.756697, :lon -74.03635, :timestamp \"2016-05-23T14:26:11.399644707Z\", :rssi -17, :lsnr 12.2, :msgid nil, :appkey nil}\n",
+  ;   :body "{:type \"attempt\", :lat 40.756697, :lon -74.03635, :timestamp \"2016-05-23T14:26:11.399644707Z\", :rssi -17, :lsnr 12.2, :msgid nil, :appkey nil}\n",
   ;   :md5of-body "f02e18460d467c04c9dd6527aca26e92"
   ; }
   (let [body (edn/read-string body-string)
@@ -168,7 +168,7 @@
     (if (or (nil? lat) (nil? lon))
       [nil, (format "Invalid ping lat/lon: %s/%s" slat slon)]
       [{
-        :type "ping"
+        :type "attempt"
         :lat lat :lon lon
         :timestamp (or (:timestamp params) (current-timestamp))
         :msgid (:msgid params)

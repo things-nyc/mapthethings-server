@@ -116,16 +116,24 @@ Bytes representing UTF-8 encoded string that contains either JSON
   {
     cells: {
       cell-hash: {
-        center: hash,
-        width: Xmax, height: Ymax,
-        lat1: X.X, lon1: X.X,
-        lat2: X.X, lon2: X.X,
-        x: x-index, y: y-index, // Position of this cell in the grid
-        varq: Q, // Running intermediate variable. std-dev = sqrt(Q / N)
-        rssi-avg: X, // Running calc as A https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
-        rssi-std: X,
-        pings: N,
-        ok: N,
+        clat: X.X, clon: X.X, // Coordinates of center of cell
+        lat1: X.X, lon1: X.X, // Coordinates of upper left corner of cell
+        lat2: X.X, lon2: X.X, // Coordinates of lower right corner of cell
+
+        rssi: {cnt, avg, q, std} // Cummulative cal per https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
+        lsnr: {cnt, avg, q, std}
+
+        // Sample volume
+        count: N,       // Count of all received/reported completed TTN messages
+
+        // Packet loss measurement
+        attempt-cnt: N, // Count of known transmission attempts
+        success-cnt: N, // Count of known transmissions successfully completed
+
+        // Data source summary
+        ttn-cnt: N,     // Count of messages receive by server via TTN network (includes success-cnt)
+        import-cnt: N,  // Count of samples imported
+        api-cnt: N,     // Count of samples reported to API
       },
     }
   }

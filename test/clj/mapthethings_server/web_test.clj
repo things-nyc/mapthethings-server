@@ -30,4 +30,4 @@
     (let [app (make-app)
           response (app (request :post "/api/v0/pings" {"lat" 40.0 "lon" -74.0 "timestamp" "2016-05-25T15:30:26.713Z"}))]
       (is (= 201 (:status response)))
-      (is (= "{\"type\":\"ping\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msgid\":null,\"appkey\":null,\"client-ip\":\"localhost\"}" (:body response))))))
+      (is (= "{\"type\":\"attempt\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msgid\":null,\"appkey\":null,\"client-ip\":\"localhost\"}" (:body response))))))
