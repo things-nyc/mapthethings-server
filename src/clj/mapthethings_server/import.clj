@@ -21,16 +21,23 @@
   (doseq [[msg raw] data]
     (post/handle-msg msg raw)))
 
-(defn parse-sample
+(defn lat-lon
+  "Extract lat/lon from sample."
   [sample]
   (let [coords (:gps sample (:coordinates sample (:coords sample)))
-        [slat slon] (if (some? coords) (string/split coords #"[,/]" 2))
-        slat (:latitude sample (:lat sample slat))
-        lat (data/parse-lat slat)
-        slon (:longitude sample (:lng sample (:lon sample slon)))
-        lon (data/parse-lon slon)]
+        [lat lon] (if (vector? coords)
+                    [(get coords 0) (get coords 1)]
+                    (let [[slat slon] (if (and (string? coords) (some? coords)) (string/split coords #"[,/]" 2))
+                          slat (:latitude sample (:lat sample slat))
+                          slon (:longitude sample (:lng sample (:lon sample slon)))]
+                      [slat slon]))]
+    [(data/parse-lat lat) (data/parse-lon lon)]))
+
+(defn parse-sample
+  [sample]
+  (let [[lat lon] (lat-lon sample)]
     (if (or (nil? lat) (nil? lon))
-      [nil, (format "Invalid ping lat/lon: %s/%s" slat slon)]
+      [nil, (format "Invalid sample lat/lon: %s" (string/join "," (map #(str (% sample)) [:gps :coordinates :coords :latitude :lat :longitude :lon :lng])))]
       [{
         :type "ping"
         :lat lat :lon lon

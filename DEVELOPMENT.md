@@ -172,3 +172,8 @@ Separately, SQS worker reads batches of 10 messages and processes them.
     - Update value for cell containing sample
   - Remove sample from queue
 - For each updated grid, write back to S3 after 30 seconds
+
+## Performance
+Import of 5,700 Utrecht samples was the first bigger test.
+Import of 5,700 records took about 4min. Processing 3,000 took 10 min. 5,700 took 19 min.
+Both processes running simultaneously on MacBook Pro 2.8 GHz i7 and 16GB RAM.

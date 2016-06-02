@@ -50,3 +50,18 @@
       (is (approx= (:rssi msg) -18 1e-5))
       (is (approx= (:lsnr msg) 10.2 1e-5))
       )))
+
+(def test-import-3
+  "{
+    \"gps\":[52.0399832725525,5.57624816894531], \"time\": \"2016-04-17 15:24:28\", \"rssi\": -117, \"snr\": -18, \"device\": \"LoRaMote Thomas\", \"gateway\": \"Lorank, De Bilt\"
+  }"
+)
+
+(deftest import-3-parse-test
+  (testing "parse import JSON"
+    (let [[msg error] (parse-sample (json/read-str test-import-3 :key-fn keyword))]
+      (is (approx= (:lat msg) 52.0399832725525 1e-15))
+      (is (approx= (:lon msg) 5.57624816894531 1e-15))
+      (is (approx= (:rssi msg) -117 1e-5))
+      (is (approx= (:lsnr msg) -18 1e-5))
+      )))

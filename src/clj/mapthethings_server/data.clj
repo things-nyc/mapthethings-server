@@ -61,15 +61,21 @@
     (update :payload decode-payload)))
 
 (defn parse-lat [s]
-  (if-let [north (fnext (re-matches #"([\.\d]+)[Nn]" s))]
-    (edn/read-string north)
-    (if-let [south (fnext (re-matches #"([\.\d]+)[Ss]" s))]
-      (- (edn/read-string south))
-      (edn/read-string s))))
+  (cond
+    (number? s) s
+    :else
+      (if-let [north (fnext (re-matches #"([\.\d]+)[Nn]" s))]
+        (edn/read-string north)
+        (if-let [south (fnext (re-matches #"([\.\d]+)[Ss]" s))]
+          (- (edn/read-string south))
+          (edn/read-string s)))))
 
 (defn parse-lon [s]
-  (if-let [east (fnext (re-matches #"([\.\d]+)[Ee]" s))]
-    (edn/read-string east)
-    (if-let [west (fnext (re-matches #"([\.\d]+)[Ww]" s))]
-      (- (edn/read-string west))
-      (edn/read-string s))))
+  (cond
+    (number? s) s
+    :else
+      (if-let [east (fnext (re-matches #"([\.\d]+)[Ee]" s))]
+        (edn/read-string east)
+        (if-let [west (fnext (re-matches #"([\.\d]+)[Ww]" s))]
+          (- (edn/read-string west))
+          (edn/read-string s)))))
