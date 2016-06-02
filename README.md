@@ -42,7 +42,8 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - Support "lat,lng" TTN messages
 - Support partitioning grid update work
 - Record histogram of number of gateways receiving a message: {1 40 2 3 5 1}
-- Record stats as :rssi {:cnt x :q y :avg z} rather than {:rssi-cnt x :rssi-q y :rssi-avg z}
+- Use mock S3 and SQS for testing
+- Collect distance to gateway stats
 - Ensure that once a grid has dropped out of the cache, the version loaded from S3 is the latest.
 - Support requesting lower depth within Geobox - client can then do higher resolution pass if desired
 - Support uploading CSV of existing data
@@ -63,6 +64,7 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - DONE - BUG - Zooming too quickly leads to undeleted rectangles
 - DONE - Drive grid updates from SQS
 - DONE - Import data from http://ttn-utrecht.ltcm.net/
+- DONE - Record stats as :rssi {:cnt x :q y :avg z} rather than {:rssi-cnt x :rssi-q y :rssi-avg z}
 
 ## Hosting
 The server is hosted on Heroku and uses Amazon S3 and SQS for storage and queuing.

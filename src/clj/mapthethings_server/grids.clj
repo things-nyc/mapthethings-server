@@ -3,6 +3,7 @@
             [environ.core :refer [env]]
             [clojure.data.json :as json]
             [amazonica.aws.s3 :as s3]
+            [mapthethings-server.stats :as stats]
             [clojure.string :as s]
             [clojure.tools.logging :as log]
             [clojure.core.cache :as cache]
@@ -64,28 +65,10 @@
 
 (defn update-signals [cell msg]
   (let [rssi (:rssi msg)
-        lsnr (:lsnr msg)
-        avgfn (fn [a x k] (+ a (/ (- x a) (incnil k)))) ; A + (x - A) / n
-        qfn (fn [q x alast anew] (+ q (* (- x alast) (- x anew)))) ; Q + (x - Alast) * (x - Anew)
-        ]
+        lsnr (:lsnr msg)]
     (cond-> cell
-      rssi ((fn [c]
-            (let [rssi-avg-old (:rssi-avg cell)
-                  rssi-avg-new (avgfn rssi-avg-old rssi (:rssi-cnt cell))]
-              (-> c
-                (update :rssi-cnt incnil)
-                (assoc :rssi-avg rssi-avg-new)
-                (update :rssi-q qfn rssi rssi-avg-old rssi-avg-new)
-                (#(assoc % :rssi-std (Math/sqrt (/ (:rssi-q %) (:rssi-cnt %))))))))) ; sqrt(Q / n)
-      lsnr ((fn [c]
-            (let [lsnr-avg-old (:lsnr-avg cell)
-                  lsnr-avg-new (avgfn lsnr-avg-old lsnr (:lsnr-cnt cell))]
-              (-> c
-                (update :lsnr-cnt incnil)
-                (assoc :lsnr-avg lsnr-avg-new)
-                (update :lsnr-q  qfn lsnr lsnr-avg-old lsnr-avg-new)
-                (#(assoc % :lsnr-std (Math/sqrt (/ (:lsnr-q %) (:lsnr-cnt %))))))))) ; sqrt(Q / n)
-      )))
+      rssi (update :rssi stats/cummulative-stat rssi)
+      lsnr (update :lsnr stats/cummulative-stat lsnr))))
 
 (defn update-cell [cell msg]
   (-> cell
@@ -114,14 +97,8 @@
     :count 0
     :ttn-cnt 0
     :ping-cnt 0
-    :rssi-avg 0.0
-    :rssi-q 0.0
-    :rssi-cnt 0
-    :rssi-std 0.0
-    :lsnr-avg 0.0
-    :lsnr-q 0.0
-    :lsnr-cnt 0
-    :lsnr-std 0.0
+    :rssi {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}
+    :lsnr {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}
     }))
 
 (defn update-grid [grid msg]

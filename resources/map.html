@@ -105,7 +105,7 @@
       fillOpacity: 0.5
       })
 
-    marker.bindPopup("TTN Messages: " + cell["rssi-cnt"]);
+    marker.bindPopup("TTN Messages: " + cell.rssi.cnt);
 
     return marker
   }

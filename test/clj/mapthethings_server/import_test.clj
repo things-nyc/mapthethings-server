@@ -53,7 +53,12 @@
 
 (def test-import-3
   "{
-    \"gps\":[52.0399832725525,5.57624816894531], \"time\": \"2016-04-17 15:24:28\", \"rssi\": -117, \"snr\": -18, \"device\": \"LoRaMote Thomas\", \"gateway\": \"Lorank, De Bilt\"
+    \"gps\":[52.0399832725525,5.57624816894531],
+    \"time\": \"2016-04-17 15:24:28\",
+    \"rssi\": -117,
+    \"snr\": -18,
+    \"device\": \"LoRaMote Thomas\",
+    \"gateway\": \"Lorank, De Bilt\"
   }"
 )
 

@@ -68,10 +68,16 @@
       (is (= (get-in updated [:cells chash :count]) 1))
       (is (= (get-in updated [:cells chash :ttn-cnt]) 1))
       (is (= (get-in updated [:cells chash :ping-cnt]) 0))
+      (is (= (get-in updated [:cells chash :rssi :cnt]) 1))
+      (is (= (get-in updated [:cells chash :rssi :avg]) 2.2))
+      (is (= (get-in updated [:cells chash :lsnr :avg]) 1.3))
       (is (some? updated-again))
       (is (= (get-in updated-again [:cells chash :count]) 2))
       (is (= (get-in updated-again [:cells chash :ttn-cnt]) 2))
       (is (= (get-in updated-again [:cells chash :ping-cnt]) 0))
+      (is (= (get-in updated-again [:cells chash :rssi :cnt]) 2))
+      (is (= (get-in updated-again [:cells chash :rssi :avg]) 2.2))
+      (is (= (get-in updated-again [:cells chash :lsnr :avg]) 1.3))
       )))
 
 (deftest sample-update-test
@@ -85,8 +91,8 @@
       :type "ttn"
       :lat 35.0
       :lon 35.0
-      :rssi 1.0
-      :lsnr 1.0
+      :rssi -15.0
+      :lsnr 10.0
       }
       results (map #(<!! %) (update-grids-with-msg msg))]
       (is (= 20 (count results))
