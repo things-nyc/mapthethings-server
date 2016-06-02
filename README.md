@@ -50,6 +50,10 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - Write task that sends 1000's of messages to test API.
 - Login with Firebase Authentication (or something else enabling Twitter, Facebook, Github, Google)
 - Deliver APP key for each user to use - may be revoked
+- BUG - clojure.lang.PersistentHashMap cannot be cast to clojure.lang.IPersistentStack doing big import
+- Restart MQTT connection periodically. Saw "org.eclipse.paho.client.mqttv3.internal.ClientState checkForActivity
+   SEVERE: frank.1464903570129: Timed out as no activity, keepAlive=60,000 lastOutboundActivity=1,464,905,984,787 lastInboundActivity=1,464,905,130,918"
+
 
 ### DONE
 - DONE - Subscribe to TTN MQQT broker at staging.thethingsnetwork.org:1883

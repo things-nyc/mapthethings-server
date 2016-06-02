@@ -16,39 +16,47 @@
   <h1>Map The Things Network</h1>
   <h3>Creating a global coverage map for
     <a href="http://thethingsnetwork.org">The Things Network</a></h3>
+  <h3>From <a href="http://thethings.nyc">The Things Network NYC</a></h3>
   <div id="mapid"></div>
   <input type="button" onclick="javascript:recenter();" value="Show Local"/>
   <div id="boundsid">Bounds: </div>
   <h2>Collecting Data</h2>
   <p>We want your data in whatever way it is available.
     We'll build out different ways to submit as we go.</p>
-  <h3>1. Map The Things - App &amp; Node (Pending)</h3>
-  <p>Use the Map The Things
-  <a href="http://github.com/things-nyc/mapthethings-ios">iOS app</a> and
-  <a href="http://github.com/things-nyc/mapthethings-node">hardware node</a>
-  to submit coverage samples.</p>
-  <p>You start the node and start the app and then
-    move around the coverage area, either as part of a specific data gathering
-    mission or just a normal day's wandering. The app will track both successful
-    and unsuccessful transmissions via TTN, thereby distinguishing between
-    untested areas and those that have been tested and found wanting.</p>
-  <h3>2. Custom Nodes</h3>
-  <p>You are welcome to create your own nodes and use them to
-  transmit GPS coordinates to the Map The Things server.</p>
-  <ul>
-    <li>AppSKey:&nbsp;<code>430D53B272A647AF5DFF6A167AB79A20</code></li>
-    <li>NwkSKey:&nbsp;<code>804243642C1E3B04366D36C3909FCAA2</code></li>
-    <li>Data:&nbsp;Send text strings of the form
-      <code>{"lat":40.7128,"lng":-74.0059}</code> or just
-      <code>40.7128,-74.0059</code></li>
-  </ul>
-  <h3>3. Upload Data</h3>
-  <p>If you want to upload existing map data, submit a pull request with your
-  data in a reasonable format (CSV, JSON, XML, YAML, EDN) in the
-  <a href="http://github.com/things-nyc/mapthethings/data">project/data</a>
-  directory. Make certain to include GPS coordinates, RSSI and SNR values
-  for successful TTN messages. Samples missing RSSI or SNR indicate failed
-  transmissions.</p>
+  <h3>1. Upload Existing Data</h3>
+    <p>Many of you may already have recordings of successful transmissions
+      paired with GPS data.</p>
+    <p>Submit a pull request with your
+    data in a reasonable format (CSV, JSON, XML, YAML, EDN) in the Github
+    <a href="https://github.com/things-nyc/mapthethings-server/tree/master/data">project/data</a>
+    directory. Make certain to include GPS coordinates, RSSI and SNR values
+    for successful TTN messages.</p>
+    <p>Let me know if your data includes attempted
+    transmissions that failed - we're interested in that data to show packet loss.</p>
+  <h3>2. GPS Nodes</h3>
+    <p>You are welcome to create your own nodes and use them to
+    transmit GPS coordinates to the Map The Things server.</p>
+    <ul>
+      <li>AppSKey:&nbsp;<code>430D53B272A647AF5DFF6A167AB79A20</code></li>
+      <li>NwkSKey:&nbsp;<code>804243642C1E3B04366D36C3909FCAA2</code></li>
+      <li>Data:&nbsp;Send text strings (UTF-8 encoded bytes) in the form
+        <code>{"lat":40.7128,"lng":-74.0059}</code> or just
+        <code>40.7128,-74.0059</code></li>
+    </ul>
+  <h3>3. Map The Things - App &amp; Node</h3>
+    <p>This option is not available because I haven't written the app or built the node, yet.</p>
+    <p>Use the Map The Things
+    <a href="http://github.com/things-nyc/mapthethings-ios">iOS app</a> and
+    <a href="http://github.com/things-nyc/mapthethings-node">hardware node</a>
+    to submit coverage samples.</p>
+    <p>You start the node and start the app and then
+      move around the coverage area, either as part of a specific data gathering
+      mission or just a normal day's wandering. The app will report all attempts
+      to send a message (via the API) as well successful transmissions via TTN.
+      The resulting data will enable us to distinguishing between
+      untested areas and those that have been tested and found wanting.</p>
+  <br/>
+  Copyright &copy; The Things Network New York 2016
   <script>
   function gotPosition(pos) {
     var crd = pos.coords;
