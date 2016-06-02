@@ -1,7 +1,8 @@
-(defproject thingsburg-server "1.0.0-SNAPSHOT"
-  :description "Thingsburg"
-  :url "http://thingsburg-server.herokuapp.com"
-  :license {:name "Proprietary Copyright (c) 2016 Frank Leon Rose"}
+(defproject mapthethings-server "1.0.0"
+  :description "MapTheThings-Server is the server side of MapTheThings, a global coverage map for The Things Network"
+  :url "http://mapthethings.herokuapp.com"
+  :license {:name "MIT License"
+            :url "http://www.opensource.org/licenses/mit-license.php"}
   ;:repositories {"local" "file:${project.basedir}/local_repo"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.async "0.2.374"]
@@ -37,14 +38,14 @@
     [lein-figwheel "0.4.1"]
     ]
   :hooks [lein-environ.plugin/hooks]
-  :uberjar-name "thingsburg-server-standalone.jar"
-  :main thingsburg-server.web
-  :aot [thingsburg-server.web]
+  :uberjar-name "mapthethings-server-standalone.jar"
+  :main mapthethings-server.web
+  :aot [mapthethings-server.web]
   :cljsbuild {
-              :builds [ { :id "thingsburg-server"
+              :builds [ { :id "mapthethings-server"
                          :source-paths ["src/cljs"]
                          :figwheel true
-                         :compiler {:main "thingsburg-server.app"
+                         :compiler {:main "mapthethings-server.app"
                                     :asset-path "js/out"
                                     :output-to "resources/public/js/app.js"
                                     :output-dir "resources/public/js/out"} } ]

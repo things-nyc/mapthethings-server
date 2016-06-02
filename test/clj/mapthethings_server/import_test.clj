@@ -1,8 +1,8 @@
-(ns thingsburg-server.import-test
+(ns mapthethings-server.import-test
   (:require [clojure.test :refer :all]
             [clojure.tools.logging :as log]
             [clojure.data.json :as json]
-            [thingsburg-server.import :refer :all]
+            [mapthethings-server.import :refer :all]
             [clojure.algo.generic.math-functions :refer [approx=]]))
 
 (def test-import-1

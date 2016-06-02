@@ -1,4 +1,4 @@
-(ns thingsburg-server.web
+(ns mapthethings-server.web
   (:require [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
@@ -9,9 +9,9 @@
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.defaults :refer :all]
             [environ.core :refer [env]]
-            [thingsburg-server.geo :as geo]
-            [thingsburg-server.grids :as grids]
-            [thingsburg-server.data :as data]
+            [mapthethings-server.geo :as geo]
+            [mapthethings-server.grids :as grids]
+            [mapthethings-server.data :as data]
             [clojurewerkz.machine-head.client :as mh]
             [amazonica.aws.s3 :as s3]
             [amazonica.aws.sqs :as sqs]
@@ -44,7 +44,7 @@
    :headers {"Content-Type" "application/json"}
    :body (json/write-str (mapv grids/s3-url (grids/view-grids lat1 lon1 lat2 lon2)) :escape-slash false)})
 
-(def messages-queue-name (or (env :messages-queue-name) "ThingsburgMessages"))
+(def messages-queue-name (or (env :messages-queue-name) "nyc_thethings_map_messages"))
 
 (def message-queue (delay (sqs/find-queue messages-queue-name)))
 

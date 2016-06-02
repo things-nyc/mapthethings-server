@@ -1,6 +1,5 @@
-(ns thingsburg-server.geo
-  (:require [clojure.string :refer [blank? join trim]]
-            [hickory.core :as hickory]
+(ns mapthethings-server.geo
+  (:require [hickory.core :as hickory]
             [hickory.render :refer [hickory-to-html]]
             [hickory.select :as select]
             [environ.core :refer [env]])

@@ -1,4 +1,4 @@
-(ns thingsburg-server.grids-test
+(ns mapthethings-server.grids-test
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [clojure.core.cache :as cache]
@@ -6,7 +6,7 @@
              :refer [>! <! >!! <!! go chan close! merge timeout]]
             [clojure.tools.logging :as log]
             [ring.mock.request :refer :all]
-            [thingsburg-server.grids :refer :all]))
+            [mapthethings-server.grids :refer :all]))
 
 (deftest grid-stack-hashes-test
   (testing "generating bounding hashes"

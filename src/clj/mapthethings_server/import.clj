@@ -1,13 +1,13 @@
-(ns thingsburg-server.import
+(ns mapthethings-server.import
   (:require [clojure.string :as string]
             [clojure.tools.logging :as log]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.data.json :as json]
             [environ.core :refer [env]]
-            [thingsburg-server.web :as post]
-            [thingsburg-server.grids :as grids]
-            [thingsburg-server.data :as data]
+            [mapthethings-server.web :as post]
+            [mapthethings-server.grids :as grids]
+            [mapthethings-server.data :as data]
             [clojurewerkz.machine-head.client :as mh]
             [clj-time.core :as time]
             [clj-time.format :as time-format]

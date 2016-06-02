@@ -1,19 +1,19 @@
-(ns thingsburg-server.data-test
+(ns mapthethings-server.data-test
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [clojure.core.async
              :refer [>! <! >!! <!! go chan close!]]
             [clojure.tools.logging :as log]
             [ring.mock.request :refer :all]
-            [thingsburg-server.data :refer :all]))
+            [mapthethings-server.data :refer :all]))
 
 (def test-ttn-string
-  ; Code: (clojure.string/upper-case (apply str (map #(format "%02x" (int %)) (.getBytes "{\"msgid\": \"[UNIQUE_MSG_ID]\", \"appkey\": \"[THINGSBURG_APP_KEY]\", \"longitude\":-74.0059, \"latitude\":40.7128}"))))
+  ; Code: (clojure.string/upper-case (apply str (map #(format "%02x" (int %)) (.getBytes "{\"msgid\": \"[UNIQUE_MSG_ID]\", \"appkey\": \"[APP_KEY]\", \"longitude\":-74.0059, \"latitude\":40.7128}"))))
 
-  ; Payload: {"msgid": "[UNIQUE_MSG_ID]", "appkey": "[THINGSBURG_APP_KEY]", "longitude":25.0, "latitude":25.0}
+  ; Payload: {"msgid": "[UNIQUE_MSG_ID]", "appkey": "[APP_KEY]", "longitude":25.0, "latitude":25.0}
   ; Hex: 7B226D73676964223A20225B554E495155455F4D53475F49445D222C20226170706B6579223A20225B5448494E4753425552475F4150505F4B45595D222C20226C6F6E676974756465223A32352E302C20226C61746974756465223A32352E307D
   ;      7B226D73676964223A20225B554E495155455F4D53475F49445D222C20226170706B6579223A20225B5448494E4753425552475F4150505F4B45595D222C20226C6F6E676974756465223A32302E302C20226C61746974756465223A32302E307D
-  ; Payload: {"msgid": "[UNIQUE_MSG_ID]", "appkey": "[THINGSBURG_APP_KEY]", "longitude":-74.0059, "latitude":-40.7128}
+  ; Payload: {"msgid": "[UNIQUE_MSG_ID]", "appkey": "[APP_KEY]", "longitude":-74.0059, "latitude":-40.7128}
   ; Hex: 7B226D73676964223A20225B554E495155455F4D53475F49445D222C20226170706B6579223A20225B5448494E4753425552475F4150505F4B45595D222C20226C6F6E676974756465223A2D37342E303035392C20226C61746974756465223A34302E373132387D
 
   "{

@@ -1,4 +1,4 @@
-(ns thingsburg-server.data
+(ns mapthethings-server.data
   (:require [clojure.edn :as edn]
             [clojure.data.codec.base64 :as b64]
             [clojure.tools.logging :as log]

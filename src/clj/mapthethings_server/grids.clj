@@ -1,6 +1,5 @@
-(ns thingsburg-server.grids
-  (:require [clojure.string :refer [blank? join trim]]
-            [clojure.edn :as edn]
+(ns mapthethings-server.grids
+  (:require [clojure.edn :as edn]
             [environ.core :refer [env]]
             [clojure.data.json :as json]
             [amazonica.aws.s3 :as s3]
@@ -19,8 +18,8 @@
 
 (def bit-prefix "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_:")
 
-(def raw-bucket (or (env :messages-bucket-name) "com.futurose.thingsburg.messages"))
-(def grid-bucket (or (env :grids-bucket-name) "com.futurose.thingsburg.grids"))
+(def raw-bucket (or (env :messages-bucket-name) "nyc.thethings.map.messages"))
+(def grid-bucket (or (env :grids-bucket-name) "nyc.thethings.map.grids"))
 
 (defn level-from-hash [hash]
   (quot (s/index-of bit-prefix (first hash)) 2))

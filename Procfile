@@ -1,1 +1,1 @@
-web: java $JVM_OPTS -cp target/thingsburg-server-standalone.jar clojure.main -m thingsburg-server.web
+web: java $JVM_OPTS -cp target/mapthethings-server-standalone.jar clojure.main -m mapthethings-server.web

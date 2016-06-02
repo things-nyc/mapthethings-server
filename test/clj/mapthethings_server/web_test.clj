@@ -1,4 +1,4 @@
-(ns thingsburg-server.web-test
+(ns mapthethings-server.web-test
   (:require [clojure.test :refer :all]
             [clojure.data.json :as json]
             [clojure.core.async
@@ -6,8 +6,8 @@
             [clojure.string :refer [blank? join trim]]
             [clojure.tools.logging :as log]
             [ring.mock.request :refer :all]
-            [thingsburg-server.grids :as grids]
-            [thingsburg-server.web :refer :all]))
+            [mapthethings-server.grids :as grids]
+            [mapthethings-server.web :refer :all]))
 
 (deftest main-page-test
   (testing "main page"
