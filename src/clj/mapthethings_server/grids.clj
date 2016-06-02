@@ -127,7 +127,7 @@
   {
     :level (level-from-hash hash)
     :hash hash
-    :write-cnt 0
+    :write-cnt 1
     :cells {}
   })
 

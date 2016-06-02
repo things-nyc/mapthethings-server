@@ -26,7 +26,7 @@
           hash (grid-hash lat lon level)
           rchan (fetch-grid-s3 hash)
           grid (<!! rchan)]
-      (is (= grid {:level 2, :hash "EF", :cells {}, :write-cnt 0})))))
+      (is (= grid {:level 2, :hash "EF", :cells {}, :write-cnt 1})))))
 
 (deftest write-grid-s3-test
   (testing "write grid"
