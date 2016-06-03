@@ -43,14 +43,15 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - Support partitioning grid update work
 - Record histogram of number of gateways receiving a message: {1 40 2 3 5 1}
 - Use mock S3 and SQS for testing
-- Collect distance to gateway stats
+- Collect distance to gateway stats (for gateways that report their position)
 - Ensure that once a grid has dropped out of the cache, the version loaded from S3 is the latest.
 - Support requesting lower depth within Geobox - client can then do higher resolution pass if desired
 - Support uploading CSV of existing data
 - Write task that sends 1000's of messages to test API.
 - Login with Firebase Authentication (or something else enabling Twitter, Facebook, Github, Google)
 - Deliver APP key for each user to use - may be revoked
-- BUG - clojure.lang.PersistentHashMap cannot be cast to clojure.lang.IPersistentStack doing big import
+- BUG - Markers (like European samples) disappear at zoom levels 0, 1, and 2. Pan and they sometimes show.
+- BUG - "clojure.lang.PersistentHashMap cannot be cast to clojure.lang.IPersistentStack" doing big import. Memory related?
 - Restart MQTT connection periodically. Saw "org.eclipse.paho.client.mqttv3.internal.ClientState checkForActivity
    SEVERE: frank.1464903570129: Timed out as no activity, keepAlive=60,000 lastOutboundActivity=1,464,905,984,787 lastInboundActivity=1,464,905,130,918"
 
