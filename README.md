@@ -54,7 +54,14 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - BUG - "clojure.lang.PersistentHashMap cannot be cast to clojure.lang.IPersistentStack" doing big import. Memory related?
 - Restart MQTT connection periodically. Saw "org.eclipse.paho.client.mqttv3.internal.ClientState checkForActivity
    SEVERE: frank.1464903570129: Timed out as no activity, keepAlive=60,000 lastOutboundActivity=1,464,905,984,787 lastInboundActivity=1,464,905,130,918"
-
+- Include Gateways from https://thethingsnetwork.org/api/v0/gateways/
+- Load TTNmapper data: ttnmapper.org/dumps
+- Share our data in an S3 bucket
+- Include histogram of spreading factor in summary data
+- Accept binary data packets. Fixed point reals: lat,lon,alt,hdop
+- Take latitude, longitude, altitude, and HDOP (horizontal dilution of precision)
+- Plot shape of points (d3.delauney filterd by alpha)
+- Make map take entire viewport with text in overlays
 
 ### DONE
 - DONE - Subscribe to TTN MQQT broker at staging.thethingsnetwork.org:1883

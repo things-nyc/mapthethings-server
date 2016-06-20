@@ -7,6 +7,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/data.json "0.2.6"]
+                 [org.clojure/data.csv "0.1.3"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.cache "0.6.5"]
                  [ch.hsr/geohash "1.3.0"]
