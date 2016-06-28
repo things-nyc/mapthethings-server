@@ -211,20 +211,30 @@
       (wrap-defaults api-defaults)
       #_(wrap-log-request)))))
 
+(defn ttn-subscribe [conn work-channel mqtt-url]
+  (letfn [
+    (resubscribe [e]
+      (log/error e "Disconnected")
+      (subscribe)
+      (log/info "Resubscribed to " mqtt-url))
+    (subscribe []
+      ;; Topic: <AppEUI>/devices/<DevEUI>/up
+      (mh/subscribe conn {"+/devices/+/up" 0}
+        (fn [^String topic _ ^bytes payload]
+          (let [json-string (String. payload "UTF-8")]
+            (log/debug "Received:" json-string)
+            (go (>! work-channel json-string))))
+        {:on-connection-lost resubscribe}))]
+      (subscribe)
+      (log/info "Subscribed to " mqtt-url)))
+
 (defn connect-to-ttn []
   (let [work-channel (ttn-handler)
         id   (mh/generate-id)
         mqtt-url (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883")
         conn (mh/connect mqtt-url id
               {:username (env :ttn-app-eui) :password (env :ttn-access-password)})]
-    ;; Topic: <AppEUI>/devices/<DevEUI>/up
-    (mh/subscribe conn {"+/devices/+/up" 0}
-      (fn [^String topic _ ^bytes payload]
-        (let [json-string (String. payload "UTF-8")]
-          (log/debug "Received:" json-string)
-          (go (>! work-channel json-string))
-          #_(mh/disconnect conn))))
-    (log/info "Subscribed to " mqtt-url)))
+    (ttn-subscribe conn work-channel mqtt-url)))
 
 #_(let [ddb (geo/get-ddb)
       manager (geo/geo-manager ddb)

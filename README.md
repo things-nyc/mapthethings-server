@@ -53,7 +53,7 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - BUG - Markers (like European samples) disappear at zoom levels 0, 1, and 2. Pan and they sometimes show.
 - BUG - "clojure.lang.PersistentHashMap cannot be cast to clojure.lang.IPersistentStack" doing big import. Memory related?
 - Restart MQTT connection periodically. Saw "org.eclipse.paho.client.mqttv3.internal.ClientState checkForActivity
-   SEVERE: frank.1464903570129: Timed out as no activity, keepAlive=60,000 lastOutboundActivity=1,464,905,984,787 lastInboundActivity=1,464,905,130,918"
+   SEVERE: frank.1464903570129: Timed out as no activity, keepAlive=60,000 lastOutboundActivity=1,464,905,984,787 lastInboundActivity=1,464,905,130,918". Suffered from connection having been dropped when testing node.
 - Include Gateways from https://thethingsnetwork.org/api/v0/gateways/
 - Load TTNmapper data: ttnmapper.org/dumps
 - Share our data in an S3 bucket
