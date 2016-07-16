@@ -20,9 +20,13 @@
   })
 
 (defn decode-payload [encoded]
+  ; TODO Parse bytes as packed lat/lon or JSON or other formats
   (let [bytes (b64/decode (.getBytes encoded))
-        json-string (String. bytes)]
-    (json/read-str json-string :key-fn keyword)))
+        json-string (String. bytes)
+        lat-lon (json/read-str json-string :key-fn keyword)]
+    (if (and (:lat lat-lon) (:lon lat-lon))
+      lat-lon
+      {:error (str "Unable to parse JSON lat/lon from " json-string)})))
 
 ; Format of message from TTN
 ; {

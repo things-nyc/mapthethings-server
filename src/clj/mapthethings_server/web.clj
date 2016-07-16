@@ -133,11 +133,14 @@
         (try
           (log/debug "Received ttn-string" ttn-string)
           (let [ttn (data/ttn-string->clj ttn-string)
-                msg (data/ttn->msg ttn)]
-            (log/debug "Converted to msg:" msg)
-            (handle-msg msg ttn-string))
+                err (get-in ttn [:payload :error])]
+            (if err
+              (log/error (str "Failed to handle TTN message. " err))
+              (let [msg (data/ttn->msg ttn)]
+                (log/debug "Converted to msg:" msg)
+                (handle-msg msg ttn-string))))
           (catch Exception e
-            (log/error e "Failed handling TTN message")))
+            (log/error e "Failed to handle TTN message")))
         (recur)))
     in))
 
