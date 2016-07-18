@@ -1,8 +1,5 @@
 (ns mapthethings-server.data-test
   (:require [clojure.test :refer :all]
-            [clojure.data.json :as json]
-            [clojure.core.async
-             :refer [>! <! >!! <!! go chan close!]]
             [clojure.tools.logging :as log]
             [ring.mock.request :refer :all]
             [mapthethings-server.data :refer :all]))
@@ -61,4 +58,31 @@
       (is (some? (:lon msg)))
       (is (= (:rssi msg) (float -5)))
       (is (= (:lsnr msg) (float 5.3)))
+      )))
+
+(deftest extract-24bit-test
+  (testing "extract 24 bit value"
+    (let [payload (byte-array [0x02 0x04 0x01])
+          value (extract-24bit payload)]
+      (is (= value 66562)))
+    (let [payload (byte-array [0xE9 0xD7 0x39])
+          value (extract-24bit payload)]
+      (is (= value 3790825)))
+    (let [payload (byte-array [0x4F 0x63 0xCB])
+          value (extract-24bit payload)]
+      (is (= value -3447985)))
+    ))
+
+(defn- float= [x y]
+  ; http://gettingclojure.wikidot.com/cookbook:numbers
+  (let [epsilon 0.00001
+        scale (if (or (zero? x) (zero? y)) 1 (Math/abs x))]
+    (<= (Math/abs (- x y)) (* scale epsilon))))
+
+(deftest payload-48bit-test
+  (testing "parse 48 bit lat/lon payload"
+    (let [payload (byte-array [0x20 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
+          msg (decode-48bit-payload payload)]
+      (is (float= 40.6714 (:lat msg)))
+      (is (float= -73.9863 (:lon msg)))
       )))

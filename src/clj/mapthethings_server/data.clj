@@ -13,26 +13,56 @@
   (log/debug ttn)
   {
     :type "ttn"
-    :lat (get-in ttn [:payload :latitude])
-    :lon (get-in ttn [:payload :longitude])
+    :lat (get-in ttn [:payload :lat])
+    :lon (get-in ttn [:payload :lon])
     :rssi (float (get-in ttn [:metadata 0 :rssi] 0))
     :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0))
   })
 
+(defn decode-json-payload [bytes]
+  (let [json-string (String. bytes)
+        lat-lon (json/read-str json-string :key-fn keyword)
+        lat-lon (if (contains? lat-lon :longitude) (assoc lat-lon :lon (:longitude lat-lon)) lat-lon)
+        lat-lon (if (contains? lat-lon :latitude) (assoc lat-lon :lat (:latitude lat-lon)) lat-lon)]
+    lat-lon))
+
+(defn extract-24bit
+  ([bytes]
+    (extract-24bit bytes 0))
+  ([bytes offset]
+    (let [low (aget bytes offset)
+          mid (aget bytes (inc offset))
+          high (aget bytes (+ offset 2))]
+          ; Thanks, https://blog.quiptiq.com/2012/07/01/creating-numeric-types-from-byte-arrays-in-clojure/
+      (bit-or
+        (bit-shift-left (int high) 16) ; Sign extended, which is what we want
+        (bit-shift-left (bit-and 0xff (int mid)) 8) ; and to chop sign extension
+        (bit-and 0xff (int low))))))
+
+(defn decode-48bit-payload [bytes]
+  (let [lat (extract-24bit bytes 1)
+        lat (/ lat 93206.0)
+        lon (extract-24bit bytes 4)
+        lon (/ lon 46603.0)]
+    {:lat lat :lon lon}))
+
 (defn decode-payload [encoded]
-  ; TODO Parse bytes as packed lat/lon or JSON or other formats
+  ; Parse bytes as packed lat/lon or JSON or other formats
   (let [bytes (b64/decode (.getBytes encoded))
-        json-string (String. bytes)
-        lat-lon (json/read-str json-string :key-fn keyword)]
+        len (alength bytes)
+        lat-lon (case (aget bytes 0)
+                  0x01 (decode-48bit-payload bytes) ; 20 112233 112233 little endian 24bit lat, lon
+                  (decode-json-payload bytes))]
     (if (and (:lat lat-lon) (:lon lat-lon))
       lat-lon
-      {:error (str "Unable to parse JSON lat/lon from " json-string)})))
+      {:error (str "Unable to parse lat/lon from " encoded)})))
 
 ; Format of message from TTN
 ; {
-;   "payload":"{ // b64 encoded bytes, which in our case are UTF-8 encoding of string
-;     "longitude":25.0,
-;     "latitude":25.0
+;   "payload":"{ // b64 encoded bytes
+;      We support
+;        48 bit lat/lon pair with format tag (7 bytes): 0x01 (type) 0xlatitu 0xlongit (both little endian)
+;        UTF-8 encoding of string {"lon":25.0,"lat":25.0}
 ;   }",
 ;   "port":1,
 ;   "counter":4,
