@@ -81,13 +81,18 @@
   ; }
   (let [body (edn/read-string body-string)
         msg (:msg body)
-        msg (assoc msg :aws-id msg-id)] ; Use sqs ID generally as unique ID
-    ; Wait for storing raw message in S3 and updating of grids
-    (if (wait-all (conj (grids/update-grids-with-msg msg)
-                    (store-raw-msg msg-id body)) 10000)
-      (log/warn "Failed to process message within 10 seconds")
+        msg (assoc msg :aws-id msg-id)
+        is-test (:test-msg msg false)
+        success (or is-test ; To get here is success for test message
+                  ; Otherwise, for a real message wait for storing raw message in S3 and updating of grids
+                  (wait-all (conj (grids/update-grids-with-msg msg)
+                    (store-raw-msg msg-id body)) 10000))] ; Use sqs ID generally as unique ID
+    (if (not success)
+      (log/warn "Failed to process message within 10 seconds") ; Allow it to be re-offered by SQS
       (do
-        (log/debug "Deleting message" msg-id)
+        (if is-test
+          (log/debug "Deleting test message" msg-id)
+          (log/debug "Deleting message" msg-id))
         (sqs/delete-message (assoc sqs-msg :queue-url @message-queue))))))
 
 (defn retry-fn [f delay msg]

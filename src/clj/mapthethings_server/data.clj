@@ -11,13 +11,16 @@
   :lat, :lon, :rssi, and :lsnr"
   [ttn]
   (log/debug ttn)
-  {
-    :type "ttn"
-    :lat (get-in ttn [:payload :lat])
-    :lon (get-in ttn [:payload :lon])
-    :rssi (float (get-in ttn [:metadata 0 :rssi] 0))
-    :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0))
-  })
+  (let [msg {
+              :type "ttn"
+              :lat (get-in ttn [:payload :lat])
+              :lon (get-in ttn [:payload :lon])
+              :rssi (float (get-in ttn [:metadata 0 :rssi] 0))
+              :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0))
+            }]
+    (if (get-in ttn [:payload :test-msg])
+      (assoc msg :test-msg true)
+      msg)))
 
 (defn decode-json-payload [bytes]
   (let [json-string (String. bytes)
@@ -50,8 +53,9 @@
   ; Parse bytes as packed lat/lon or JSON or other formats
   (let [bytes (b64/decode (.getBytes encoded))
         len (alength bytes)
-        lat-lon (case (aget bytes 0)
-                  0x01 (decode-48bit-payload bytes) ; 20 112233 112233 little endian 24bit lat, lon
+        lat-lon (case (bit-and 0xFF (aget bytes 0))
+                  0x01 (decode-48bit-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
+                  0x81 (assoc (decode-48bit-payload bytes) :test-msg true) ; 01 112233 112233 (little endian 24bit lat, lon)
                   (decode-json-payload bytes))]
     (if (and (:lat lat-lon) (:lon lat-lon))
       lat-lon
