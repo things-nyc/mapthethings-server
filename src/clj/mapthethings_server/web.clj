@@ -55,15 +55,15 @@
   (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw})))
 
 (defn wait-all
-  "Waits for all channels and timeout in msecs. Returns true if timed out."
+  "Waits for all channels and timeout in msecs. Returns true if succeeded."
   [channels wait-msecs]
   (let [tc (timeout wait-msecs)]
     (<!! (go-loop [channels (conj channels tc)]
       (if (= 1 (count channels))
-        false ; We got to 1 without hitting timeout!
+        true ; The only channel left is the timeout. Yay!
         (let [[_ c] (alts! (vec channels))]
           (if (identical? c tc)
-            true
+            false ; Timeout signaled. Drat!
             (recur (remove #(identical? % c) channels)))))))))
 
 (defn process-sqs-msg [{msg-id :message-id body-string :body :as sqs-msg}]
