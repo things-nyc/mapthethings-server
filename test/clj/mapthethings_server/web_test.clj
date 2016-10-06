@@ -20,7 +20,7 @@
   (testing "view grids endpoint"
     (let [app (make-app)
           response (app (request :get "/api/v0/grids/10.0/10.0/8.0/12.0"))
-          grid-ids ["E70CQ-v0","B70CQ-v0","A70CQ-v0","F60CQ-v0","E60CQ-v0","4D0CQ-v0","1D0CQ-v0","0D0CQ-v0","5C0CQ-v0","4C0CQ-v0","6D0CQ-v0","3D0CQ-v0","2D0CQ-v0","7C0CQ-v0","6C0CQ-v0"]
+          grid-ids ["E70CQ-v0","B70CQ-v0","A70CQ-v0","F60CQ-v0","4D0CQ-v0","1D0CQ-v0","0D0CQ-v0","5C0CQ-v0"]
           expectation (format "[%s]" (join "," (map (partial format "\"https://s3.amazonaws.com/%s/%s\"" grids/grid-bucket) grid-ids)))]
       (is (= 200 (:status response)))
       (is (= expectation (:body response))))))

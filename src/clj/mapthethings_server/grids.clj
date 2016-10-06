@@ -22,8 +22,37 @@
 (def raw-bucket (or (env :messages-bucket-name) "nyc.thethings.map.messages"))
 (def grid-bucket (or (env :grids-bucket-name) "nyc.thethings.map.grids"))
 
+(defn bit-length-from-hash [hash]
+  (s/index-of bit-prefix (first hash)))
+
 (defn level-from-hash [hash]
-  (quot (s/index-of bit-prefix (first hash)) 2))
+  (quot (bit-length-from-hash hash) 2))
+
+(def hexLookup
+  {\0 "0000" \1 "0001" \2 "0010" \3 "0011"
+   \4 "0100" \5 "0101" \6 "0110" \7 "0111"
+   \8 "1000" \9 "1001" \A "1010" \B "1011"
+   \C "1100" \D "1101" \E "1110" \F "1111"})
+
+(defn hex2bin [hex]
+  (s/join (map hexLookup (seq hex))))
+
+(defn hash2geo [hash]
+  (let [bits (bit-length-from-hash hash)
+        bin (hex2bin (subs hash 1))
+        bin-len (count bin)
+        bin (cond
+              (< bits bin-len) (subs bin (- bin-len bits)) ; Chop extra from front
+              (> bits bin-len) (str (apply str (repeat (- bits bin-len) \0)) bin) ; Prefix with 0's
+              :else bin)]
+    (GeoHash/fromBinaryString bin)))
+
+(defn coordinate-from-hash [hash]
+  (let [geo (hash2geo hash)
+        center (.getBoundingBoxCenterPoint geo)]
+    {:level (level-from-hash hash)
+     :lat (.getLatitude center)
+     :lon (.getLongitude center)}))
 
 (defn geohash-to-string [g]
   (format "%s%X" (get bit-prefix (.significantBits g)) (.ord g)))
@@ -250,6 +279,9 @@
               geo (if (zero? y) geo ((apply comp (repeat y #(.getSouthernNeighbour %))) geo))]
           (geohash-to-string geo))))))
 
+(defn round-up-99 [x]
+  (int (+ x 0.99)))
+
 (defn view-grids
   "Return a set of hashes representing grids that would cover view"
   ([lat1 lon1 lat2 lon2]
@@ -269,15 +301,16 @@
              ulat (.getLatitude ul1)
              llat (.getLatitude (.getLowerRight box2))
              box-height (Math/abs (- ulat (.getLatitude lr1)))
-             y-count (inc (int (/ (Math/abs (- ulat llat)) box-height)))
+             lat-span (- ulat llat (if (< lat1 lat2) -180 0))
+             y-count (round-up-99 (/ lat-span box-height))
 
              llon (.getLongitude ul1)
              rlon (.getLongitude (.getLowerRight box2))
-             rlon (if (< rlon llon) (+ rlon 360) rlon)
+             lon-span (- rlon llon (if (> lon1 lon2) -360 0))
              box-width (Math/abs (- (.getLongitude lr1) llon))
-             x-count (inc (int (/ (Math/abs (- rlon llon)) box-width)))]
+             x-count (round-up-99 (/ lon-span box-width))]
 
-         #_(log/debug "x-count" x-count ", y-count" y-count)
+         ;(log/debug "x-count" x-count ", y-count" y-count ", lat-span" lat-span ", lon-span" lon-span)
          (if (and (<= x-count max-grid-count) (<= y-count max-grid-count))
            (generate-view-grids lat1 lon1 x-count y-count level)
            (recur (dec level))))))))
