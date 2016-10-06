@@ -1,3 +1,4 @@
+![Travis Build Status](https://travis-ci.org/things-nyc/mapthethings-server.svg?branch=master)
 
 # MapTheThings-Server
 
