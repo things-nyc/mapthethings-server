@@ -57,18 +57,18 @@
           hash (grid-hash lat lon level)
           chash (keyword (cell-hash lat lon level))
           grid {
-            :level level
-            :hash hash
-            :cells {}
-          }
+                :level level
+                :hash hash
+                :cells {}}
+
           msg {:type "ttn" :lat lat :lon lon :rssi 2.2 :lsnr 1.3}
           updated (update-grid grid msg)
           updated-again (update-grid updated msg)
           msg {:type "import" :lat lat :lon lon :rssi 2.2 :lsnr 1.3}
           updated-import (update-grid updated-again msg)
           msg {:type "attempt" :lat lat :lon lon}
-          updated-attempt (update-grid updated-import msg)
-          ]
+          updated-attempt (update-grid updated-import msg)]
+
       (is (some? updated))
       (is (= (get-in updated [:cells chash :count]) 1))
       (is (= (get-in updated [:cells chash :ttn-cnt]) 1))
@@ -108,8 +108,8 @@
       (is (= (get-in updated-attempt [:cells chash :success-cnt]) 0))
       (is (= (get-in updated-attempt [:cells chash :rssi :cnt]) 3))
       (is (= (get-in updated-attempt [:cells chash :rssi :avg]) 2.2))
-      (is (= (get-in updated-attempt [:cells chash :lsnr :avg]) 1.3))
-      )))
+      (is (= (get-in updated-attempt [:cells chash :lsnr :avg]) 1.3)))))
+
 
 (deftest sample-update-test
   (testing "sample updating"
@@ -119,15 +119,15 @@
 (deftest update-grids-with-msg-test
   (testing "Processing in response to a ttn message"
     (let [msg {
-      :type "ttn"
-      :lat 35.0
-      :lon 35.0
-      :rssi -15.0
-      :lsnr 10.0
-      }
-      results (map #(<!! %) (update-grids-with-msg msg))]
+               :type "ttn"
+               :lat 35.0
+               :lon 35.0
+               :rssi -15.0
+               :lsnr 10.0}
+
+          results (map #(<!! %) (update-grids-with-msg msg))]
       (is (= 20 (count results))
-      (<!! (go (<! (timeout 45000))))))))
+       (<!! (go (<! (timeout 45000))))))))
 
 (deftest make-grid-atom-test
   (testing "Make a grid atom and it should go in the cache"
@@ -136,9 +136,9 @@
           level 4
           hash (grid-hash lat lon level)
           ;_ (log/debug "Hash" hash "GridCache" @GridCache)
-          grid-atom (make-grid-atom {:level level :hash hash :cells {}})
+          grid-atom (make-grid-atom {:level level :hash hash :cells {}})]
           ;_ (log/debug "GridCache post change" @GridCache)
-          ]
+
       (is (some? (cache/lookup @GridCache hash))))))
 
 (deftest view-grids-test

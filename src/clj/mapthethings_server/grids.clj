@@ -89,23 +89,23 @@
         lr (.getLowerRight box)
         center (.getBoundingBoxCenterPoint geohash)]
     {
-    :hash (geohash-to-string geohash)
-    :lat1 (.getLatitude ul)
-    :lon1 (.getLongitude ul)
-    :lat2 (.getLatitude lr)
-    :lon2 (.getLongitude lr)
-    :clat (.getLatitude center)
-    :clon (.getLongitude center)
+     :hash (geohash-to-string geohash)
+     :lat1 (.getLatitude ul)
+     :lon1 (.getLongitude ul)
+     :lat2 (.getLatitude lr)
+     :lon2 (.getLongitude lr)
+     :clat (.getLatitude center)
+     :clon (.getLongitude center)
     ; x: x-index, y: y-index, // Position of this cell in the grid
-    :count 0
-    :ttn-cnt 0
-    :api-cnt 0
-    :import-cnt 0
-    :attempt-cnt 0
-    :success-cnt 0
-    :rssi {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}
-    :lsnr {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}
-    }))
+     :count 0
+     :ttn-cnt 0
+     :api-cnt 0
+     :import-cnt 0
+     :attempt-cnt 0
+     :success-cnt 0
+     :rssi {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}
+     :lsnr {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}}))
+
 
 (defn update-grid [grid msg]
   (let [level (:level grid)
@@ -128,8 +128,7 @@
     :level (level-from-hash hash)
     :hash hash
     :write-cnt 1
-    :cells {}
-  })
+    :cells {}})
 
 (defn fetch-grid-s3
   "Fetch a grid from S3.
@@ -138,15 +137,15 @@
   (go
     (try
       (let [obj (slurp (:input-stream
-                  (s3/get-object
-                    :bucket-name grid-bucket
-                    :key (s3-key hash))))
+                        (s3/get-object
+                          :bucket-name grid-bucket
+                          :key (s3-key hash))))
             grid (json->grid obj)]
         (update grid :write-cnt incnil)) ; We loaded it because we're going to write it
-    (catch AmazonS3Exception e
-      (if (not= 404 (.getStatusCode e))
-        (log/error e "Failed to get grid."))
-      (make-grid hash)))))
+     (catch AmazonS3Exception e
+       (if (not= 404 (.getStatusCode e))
+         (log/error e "Failed to get grid."))
+       (make-grid hash)))))
 
 (defn write-s3-as-json
   "Returns a channel that contains the result of the S3 put operation."
@@ -155,12 +154,12 @@
         bytes (.getBytes json "UTF-8")
         input-stream (java.io.ByteArrayInputStream. bytes)]
     (go (s3/put-object
-      :bucket-name bucket-name
-      :key key
-      :input-stream input-stream
-      :metadata {
-        :content-type "application/json"
-        :content-length (count bytes)}))))
+         :bucket-name bucket-name
+         :key key
+         :input-stream input-stream
+         :metadata {
+                    :content-type "application/json"
+                    :content-length (count bytes)}))))
 
 (defn write-grid-s3 [grid]
   (go
@@ -168,9 +167,9 @@
       (let [hash (:hash grid)
             response (<! (write-s3-as-json grid-bucket (s3-key hash) grid))]
         {:ok response})
-    (catch AmazonS3Exception e
-      (log/error e "Failed to write grid")
-      {:error e}))))
+     (catch AmazonS3Exception e
+       (log/error e "Failed to write grid")
+       {:error e}))))
 
 (defn make-grid-watcher
   "Enqueues grid for write 30 seconds after it changes."
@@ -228,19 +227,19 @@
   (let [lat (:lat msg)
         lon (:lon msg)]
     (vec (for [level (range 20)]
-      (go
-        (try
-          #_(log/debug "Handle msg " lat " x " lon " at level " level)
-          (let [hash (grid-hash lat lon level)
-                #_(log/debug "Hash: " hash)
-                grid-atom (<! (fetch-grid hash))
-                #_(log/debug "Fetched grid-atom" grid-atom)]
-            (swap! grid-atom update-grid msg)
-            (log/debug "Updated grid" hash)
-            hash)
-          (catch Exception e
-            (log/error e)
-            e)))))))
+          (go
+            (try
+              #_(log/debug "Handle msg " lat " x " lon " at level " level)
+              (let [hash (grid-hash lat lon level)
+                    #_(log/debug "Hash: " hash)
+                    grid-atom (<! (fetch-grid hash))
+                    #_(log/debug "Fetched grid-atom" grid-atom)]
+                (swap! grid-atom update-grid msg)
+                (log/debug "Updated grid" hash)
+                hash)
+              (catch Exception e
+                (log/error e)
+                e)))))))
 
 (defn generate-view-grids [lat lon x-count y-count level]
   (vec
@@ -254,31 +253,31 @@
 (defn view-grids
   "Return a set of hashes representing grids that would cover view"
   ([lat1 lon1 lat2 lon2]
-    (view-grids lat1 lon1 lat2 lon2 6))
+   (view-grids lat1 lon1 lat2 lon2 6))
 
   ([lat1 lon1 lat2 lon2 max-grid-count]
-  (loop [level 20]
-    (if (zero? level)
-      [(grid-hash lat1 lon1 level)]
-      (let [geo1 (grid-hash-raw lat1 lon1 level)
-            box1 (.getBoundingBox geo1)
-            geo2 (grid-hash-raw lat2 lon2 level)
-            box2 (.getBoundingBox geo2)
-            ul1 (.getUpperLeft box1)
-            lr1 (.getLowerRight box1)
+   (loop [level 20]
+     (if (zero? level)
+       [(grid-hash lat1 lon1 level)]
+       (let [geo1 (grid-hash-raw lat1 lon1 level)
+             box1 (.getBoundingBox geo1)
+             geo2 (grid-hash-raw lat2 lon2 level)
+             box2 (.getBoundingBox geo2)
+             ul1 (.getUpperLeft box1)
+             lr1 (.getLowerRight box1)
 
-            ulat (.getLatitude ul1)
-            llat (.getLatitude (.getLowerRight box2))
-            box-height (Math/abs (- ulat (.getLatitude lr1)))
-            y-count (inc (int (/ (Math/abs (- ulat llat)) box-height)))
+             ulat (.getLatitude ul1)
+             llat (.getLatitude (.getLowerRight box2))
+             box-height (Math/abs (- ulat (.getLatitude lr1)))
+             y-count (inc (int (/ (Math/abs (- ulat llat)) box-height)))
 
-            llon (.getLongitude ul1)
-            rlon (.getLongitude (.getLowerRight box2))
-            rlon (if (< rlon llon) (+ rlon 360) rlon)
-            box-width (Math/abs (- (.getLongitude lr1) llon))
-            x-count (inc (int (/ (Math/abs (- rlon llon)) box-width)))
-            ]
-        #_(log/debug "x-count" x-count ", y-count" y-count)
-        (if (and (<= x-count max-grid-count) (<= y-count max-grid-count))
-          (generate-view-grids lat1 lon1 x-count y-count level)
-          (recur (dec level))))))))
+             llon (.getLongitude ul1)
+             rlon (.getLongitude (.getLowerRight box2))
+             rlon (if (< rlon llon) (+ rlon 360) rlon)
+             box-width (Math/abs (- (.getLongitude lr1) llon))
+             x-count (inc (int (/ (Math/abs (- rlon llon)) box-width)))]
+
+         #_(log/debug "x-count" x-count ", y-count" y-count)
+         (if (and (<= x-count max-grid-count) (<= y-count max-grid-count))
+           (generate-view-grids lat1 lon1 x-count y-count level)
+           (recur (dec level))))))))

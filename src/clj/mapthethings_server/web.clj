@@ -59,12 +59,12 @@
   [channels wait-msecs]
   (let [tc (timeout wait-msecs)]
     (<!! (go-loop [channels (conj channels tc)]
-      (if (= 1 (count channels))
-        true ; The only channel left is the timeout. Yay!
-        (let [[_ c] (alts! (vec channels))]
-          (if (identical? c tc)
-            false ; Timeout signaled. Drat!
-            (recur (remove #(identical? % c) channels)))))))))
+          (if (= 1 (count channels))
+            true ; The only channel left is the timeout. Yay!
+            (let [[_ c] (alts! (vec channels))]
+              (if (identical? c tc)
+                false ; Timeout signaled. Drat!
+                (recur (remove #(identical? % c) channels)))))))))
 
 (defn process-sqs-msg [{msg-id :message-id body-string :body :as sqs-msg}]
   ; {
@@ -86,7 +86,7 @@
         success (or is-test ; To get here is success for test message
                   ; Otherwise, for a real message wait for storing raw message in S3 and updating of grids
                   (wait-all (conj (grids/update-grids-with-msg msg)
-                    (store-raw-msg msg-id body)) 10000))] ; Use sqs ID generally as unique ID
+                             (store-raw-msg msg-id body)) 10000))] ; Use sqs ID generally as unique ID
     (if (not success)
       (log/warn "Failed to process message within 10 seconds") ; Allow it to be re-offered by SQS
       (do
@@ -99,12 +99,12 @@
   (fn [& args]
     (loop []
       (let [[v e]
-        (try
-          [(apply f args) nil]
-        (catch Exception e
-          (log/error e msg)
-          (<!! (timeout delay))
-          [nil e]))]
+            (try
+              [(apply f args) nil]
+             (catch Exception e
+               (log/error e msg)
+               (<!! (timeout delay))
+               [nil e]))]
         (if (some? e)
           (recur)
           v)))))
@@ -129,7 +129,7 @@
           (process-sqs-msg msg)
           (catch Exception e
             (log/error e (str "Failed processing SQS message"  (:message-id msg)))))))
-      (recur)))
+    (recur)))
 
 (defn ttn-handler []
   (let [in (chan)]
@@ -181,8 +181,8 @@
         :timestamp (or (:timestamp params) (current-timestamp))
         :msgid (:msgid params)
         :appkey (:appkey params)
-        :client-ip (get-client-ip req)
-      }, nil])))
+        :client-ip (get-client-ip req)}
+       , nil])))
 
 (defroutes routes
   (GET "/" [] (splash))
@@ -208,16 +208,16 @@
 
 (defn make-app
   ([]
-  (make-app {}))
+   (make-app {}))
 
   ([services]
-  (let [ic (:inbound-chan services)
+   (let [ic (:inbound-chan services)]
         ;services (if ic services (assoc services :inbound-chan (ping-handler)))
-        ]
-    (-> routes
+
+     (-> routes
       ;(wrap-services services)
-      (wrap-defaults api-defaults)
-      #_(wrap-log-request)))))
+       (wrap-defaults api-defaults)
+       #_(wrap-log-request)))))
 
 (defn connect-to-ttn []
   (let [work-channel (ttn-handler)
@@ -225,26 +225,26 @@
         mqtt-url (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883")
         mqtt-opts {:username (env :ttn-app-eui) :password (env :ttn-access-password)
                    :keep-alive-interval 60 #_seconds}]
-  (letfn [
-    (resubscribe [e]
-      (log/error e "TTN Disconnected")
-      (subscribe)
-      (log/info "Resubscribed to TTN at" mqtt-url))
-    (subscribe []
+   (letfn [
+           (resubscribe [e]
+             (log/error e "TTN Disconnected")
+             (subscribe)
+             (log/info "Resubscribed to TTN at" mqtt-url))
+           (subscribe []
       ;; Topic: <AppEUI>/devices/<DevEUI>/up
-      (mh/subscribe (mh/connect mqtt-url id mqtt-opts) {"+/devices/+/up" 0} ; 0 QOS is fire-and-forget
-        (fn [^String topic metadata ^bytes mqtt-msg]
-          (let [json-string-msg (String. mqtt-msg "UTF-8")]
-            (go (>! work-channel json-string-msg))))
-        {:on-connection-lost resubscribe}))]
-      (subscribe)
-      (log/info "Subscribed to TTN at" mqtt-url))))
+             (mh/subscribe (mh/connect mqtt-url id mqtt-opts) {"+/devices/+/up" 0} ; 0 QOS is fire-and-forget
+               (fn [^String topic metadata ^bytes mqtt-msg]
+                 (let [json-string-msg (String. mqtt-msg "UTF-8")]
+                   (go (>! work-channel json-string-msg))))
+               {:on-connection-lost resubscribe}))]
+       (subscribe)
+       (log/info "Subscribed to TTN at" mqtt-url))))
 
 #_(let [ddb (geo/get-ddb)
-      manager (geo/geo-manager ddb)
+        manager (geo/geo-manager ddb)]
       ;table (create-table ddb)
-      ]
-  (log/info #_(.toString table) (.toString manager)))
+
+   (log/info #_(.toString table) (.toString manager)))
 
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 5000))

@@ -12,13 +12,13 @@
                  [org.clojure/core.cache "0.6.5"]
                  [ch.hsr/geohash "1.3.0"]
                  [log4j/log4j "1.2.17" :exclusions [javax.mail/mail
-                                                 javax.jms/jms
-                                                 com.sun.jmdk/jmxtools
-                                                 com.sun.jmx/jmxri]]
                  [compojure "1.4.0"]
                  [ring/ring-jetty-adapter "1.4.0"]
                  [ring/ring-defaults "0.2.0"]
                  [environ "1.0.3"]
+                                                    javax.jms/jms
+                                                    com.sun.jmdk/jmxtools
+                                                    com.sun.jmx/jmxri]]
                  [org.clojure/data.codec "0.1.0"]
                  ;;ClojureScript
                  [org.clojure/clojurescript "1.7.122"]
@@ -28,7 +28,7 @@
                  [amazonica "0.3.57"]
                  [clj-time "0.11.0"]
                  ;[com.amazonaws.geo/dynamodb-geo "1.0.0"]
-                 ]
+
   :min-lein-version "2.0.0"
   :source-paths ["src/clj"]
   :test-paths ["test/clj"]
@@ -47,8 +47,8 @@
                          :compiler {:main "mapthethings-server.app"
                                     :asset-path "js/out"
                                     :output-to "resources/public/js/app.js"
-                                    :output-dir "resources/public/js/out"} } ]
-              }
+                                    :output-dir "resources/public/js/out"}}]}
+
   :profiles {
     :uberjar {:aot :all}
     :production {:env {:production true}}
