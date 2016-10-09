@@ -16,8 +16,8 @@
               :lat (get-in ttn [:payload :lat])
               :lon (get-in ttn [:payload :lon])
               :rssi (float (get-in ttn [:metadata 0 :rssi] 0))
-              :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0))
-            }]
+              :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0))}]
+
     (if (get-in ttn [:payload :test-msg])
       (assoc msg :test-msg true)
       msg)))
@@ -31,16 +31,16 @@
 
 (defn extract-24bit
   ([bytes]
-    (extract-24bit bytes 0))
+   (extract-24bit bytes 0))
   ([bytes offset]
-    (let [low (aget bytes offset)
-          mid (aget bytes (inc offset))
-          high (aget bytes (+ offset 2))]
+   (let [low (aget bytes offset)
+         mid (aget bytes (inc offset))
+         high (aget bytes (+ offset 2))]
           ; Thanks, https://blog.quiptiq.com/2012/07/01/creating-numeric-types-from-byte-arrays-in-clojure/
-      (bit-or
-        (bit-shift-left (int high) 16) ; Sign extended, which is what we want
-        (bit-shift-left (bit-and 0xff (int mid)) 8) ; and to chop sign extension
-        (bit-and 0xff (int low))))))
+     (bit-or
+       (bit-shift-left (int high) 16) ; Sign extended, which is what we want
+       (bit-shift-left (bit-and 0xff (int mid)) 8) ; and to chop sign extension
+       (bit-and 0xff (int low))))))
 
 (defn decode-48bit-payload [bytes]
   (let [lat (extract-24bit bytes 1)

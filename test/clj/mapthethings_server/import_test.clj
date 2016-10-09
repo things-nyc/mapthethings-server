@@ -20,8 +20,8 @@
       \"server_time\": 1464013569,
       \"snr\": 10.2,
       \"time\": \"2016-05-23T14:26:09.067686292Z\"
-  }"
-)
+  }")
+
 
 (deftest import-1-parse-test
   (testing "parse import JSON"
@@ -29,8 +29,8 @@
       (is (approx= (:lat msg) 40.756697 1e-5))
       (is (approx= (:lon msg) -74.036350 1e-5))
       (is (approx= (:rssi msg) -18 1e-5))
-      (is (approx= (:lsnr msg) 10.2 1e-5))
-      )))
+      (is (approx= (:lsnr msg) 10.2 1e-5)))))
+
 
 (def test-import-2
   "{
@@ -39,8 +39,8 @@
     \"rssi\": -18.00,
     \"snr\": 10.20,
     \"time\": \"2016-05-23T14:26:09.067686292Z\"
-  }"
-)
+  }")
+
 
 (deftest import-2-parse-test
   (testing "parse import JSON"
@@ -48,8 +48,8 @@
       (is (approx= (:lat msg) -40.756697 1e-5))
       (is (approx= (:lon msg) 74.036350 1e-5))
       (is (approx= (:rssi msg) -18 1e-5))
-      (is (approx= (:lsnr msg) 10.2 1e-5))
-      )))
+      (is (approx= (:lsnr msg) 10.2 1e-5)))))
+
 
 (def test-import-3
   "{
@@ -59,8 +59,8 @@
     \"snr\": -18,
     \"device\": \"LoRaMote Thomas\",
     \"gateway\": \"Lorank, De Bilt\"
-  }"
-)
+  }")
+
 
 (deftest import-3-parse-test
   (testing "parse import JSON"
@@ -68,5 +68,4 @@
       (is (approx= (:lat msg) 52.0399832725525 1e-15))
       (is (approx= (:lon msg) 5.57624816894531 1e-15))
       (is (approx= (:rssi msg) -117 1e-5))
-      (is (approx= (:lsnr msg) -18 1e-5))
-      )))
+      (is (approx= (:lsnr msg) -18 1e-5)))))

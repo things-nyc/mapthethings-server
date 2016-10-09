@@ -47,8 +47,8 @@
       (is (some? (:lat msg)))
       (is (some? (:lon msg)))
       (is (some? (:rssi msg)))
-      (is (some? (:lsnr msg)))
-      )))
+      (is (some? (:lsnr msg))))))
+
 
 (deftest ttn-parse-test
   (testing "parse ttn string as a clj map with keywords"
@@ -57,8 +57,8 @@
       (is (some? (:lat msg)))
       (is (some? (:lon msg)))
       (is (= (:rssi msg) (float -5)))
-      (is (= (:lsnr msg) (float 5.3)))
-      )))
+      (is (= (:lsnr msg) (float 5.3))))))
+
 
 (deftest extract-24bit-test
   (testing "extract 24 bit value"
@@ -70,8 +70,8 @@
       (is (= value 3790825)))
     (let [payload (byte-array [0x4F 0x63 0xCB])
           value (extract-24bit payload)]
-      (is (= value -3447985)))
-    ))
+      (is (= value -3447985)))))
+
 
 (defn- float= [x y]
   ; http://gettingclojure.wikidot.com/cookbook:numbers
@@ -84,5 +84,4 @@
     (let [payload (byte-array [0x20 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
           msg (decode-48bit-payload payload)]
       (is (float= 40.6714 (:lat msg)))
-      (is (float= -73.9863 (:lon msg)))
-      )))
+      (is (float= -73.9863 (:lon msg))))))

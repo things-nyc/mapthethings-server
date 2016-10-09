@@ -42,8 +42,8 @@
 (defn try-parse-time [f t]
   (try
     (time-format/parse f t)
-  (catch IllegalArgumentException e
-    nil)))
+   (catch IllegalArgumentException e
+     nil)))
 
 (defn parse-time [t]
   (if-let [parsed (or (try-parse-time utc-formatter t) (try-parse-time csv-formatter t))]
@@ -69,8 +69,8 @@
         :rssi (parse-number (:rssi sample))
         :lsnr (parse-number (or (:lsnr sample) (:snr sample)))
         :msgid (:msgid sample)
-        :appkey (:appkey sample)
-      }, sample])))
+        :appkey (:appkey sample)}
+       , sample])))
 
 (defn parse-json-file
   "Parses the JSON file and returns a sequence of [msg raw-msg] pairs."
