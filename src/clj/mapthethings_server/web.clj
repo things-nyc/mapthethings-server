@@ -149,15 +149,15 @@
         (recur)))
     in))
 
-(defn ping-response [ping req-body]
+(defn msg-sent-response [msg req-body]
   (try
-      (log/debug "Received ping-string" ping)
-      (handle-msg ping req-body)
+      (log/debug "Received msg-sent-packet" msg)
+      (handle-msg msg req-body)
       {:status 201 ; HTTP "Created"
        :headers {"Content-Type" "application/json"}
-       :body (json/write-str ping :escape-slash false)}
+       :body (json/write-str msg :escape-slash false)}
     (catch Exception e
-      (let [error-msg (format "Failed to handle ping [%s]." (str ping))]
+      (let [error-msg (format "Failed to handle msg-sent [%s]." (str msg))]
         (log/error e error-msg)
         (error-response 500 error-msg)))))
 
@@ -168,19 +168,20 @@
     (-> ips (clojure.string/split #",") first)
     (:remote-addr req)))
 
-(defn parse-ping-request [{params :params :as req}]
+(defn parse-msg-sent-request [{params :params :as req}]
   (let [slat (:latitude params (:lat params))
         lat (data/parse-lat slat)
         slon (:longitude params (:lng params (:lon params)))
         lon (data/parse-lon slon)]
     (if (or (nil? lat) (nil? lon))
-      [nil, (format "Invalid ping lat/lon: %s/%s" slat slon)]
+      [nil, (format "Invalid msg-sent lat/lon: %s/%s" slat slon)]
       [{
         :type "attempt"
         :lat lat :lon lon
         :timestamp (or (:timestamp params) (current-timestamp))
-        :msgid (:msgid params)
+        :msg_seq (:msg_seq params)
         :appkey (:appkey params)
+        :dev_eui (:dev_eui params)
         :client-ip (get-client-ip req)}
        , nil])))
 
@@ -189,10 +190,10 @@
   (GET "/api/v0/grids/:lat1/:lon1/:lat2/:lon2"
     [lat1 lon1 lat2 lon2 :as request]
     (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
-  (POST "/api/v0/pings" req
-    (let [[ping, error-msg] (parse-ping-request req)]
-      (if ping
-        (ping-response ping (prn-str (:params req)))
+  (POST "/api/v0/msg-sent" req
+    (let [[msg, error-msg] (parse-msg-sent-request req)]
+      (if msg
+        (msg-sent-response msg (prn-str (:params req)))
         (error-response 400 error-msg))))
   (ANY "*" []
        (route/not-found (slurp (io/resource "404.html")))))
@@ -212,7 +213,7 @@
 
   ([services]
    (let [ic (:inbound-chan services)]
-        ;services (if ic services (assoc services :inbound-chan (ping-handler)))
+        ;services (if ic services (assoc services :inbound-chan (msg-sent-handler)))
 
      (-> routes
       ;(wrap-services services)

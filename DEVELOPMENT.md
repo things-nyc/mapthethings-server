@@ -89,11 +89,11 @@ Bytes representing UTF-8 encoded string that contains either JSON
   ```
   {
   ```
-- PUT /api/v0/pings - Write that an attempt was made
+- PUT /api/v0/msg-sent - Write that an attempt was made
   ```
   {
     appkey: [MapTheThings App Key] // Connects this API call to a particular user.
-    msg_seq: [Sequence number for this message] // Used to link ping attempt with TTN message
+    msg_seq: [Sequence number for this message] // Used to link attempt with TTN message
     dev_eui: "00000000DEADBEEF" // Combined with msg_seq to create unique ID
     latitude: X.X
     longitude: Y.Y

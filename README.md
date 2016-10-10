@@ -68,7 +68,7 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - DONE - API serves list of URL's covering Geobox
 - DONE - Web app renders rectangles in JSON: Loads from public S3 and plots lat/lon boxes
 - DONE - Support TTN message with plain text for testing (it already worked)
-- DONE - Accept ping messages that indicate an attempt to write from a location.
+- DONE - Accept sent messages that indicate an attempt to write from a location.
 - DONE - Post messages to SQS first thing
 - DONE - Store raw messages to S3 (we'll want to replay them sometime)
 - DONE - Import JSON array of samples

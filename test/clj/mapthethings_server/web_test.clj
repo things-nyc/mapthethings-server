@@ -25,9 +25,10 @@
       (is (= 200 (:status response)))
       (is (= expectation (:body response))))))
 
-(deftest ping-test
-  (testing "ping endpoint"
+(deftest msg-sent-test
+  (testing "msg-sent endpoint"
     (let [app (make-app)
-          response (app (request :post "/api/v0/pings" {"lat" 40.0 "lon" -74.0 "timestamp" "2016-05-25T15:30:26.713Z"}))]
+          msg {"lat" 40.0 "lon" -74.0 "timestamp" "2016-05-25T15:30:26.713Z" "appkey" "MYAPPKEY" "dev_eui" "0123456789ABCDEF" "msg_seq" 12345}
+          response (app (request :post "/api/v0/msg-sent" msg))]
       (is (= 201 (:status response)))
-      (is (= "{\"type\":\"attempt\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msgid\":null,\"appkey\":null,\"client-ip\":\"localhost\"}" (:body response))))))
+      (is (= "{\"type\":\"attempt\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msg_seq\":\"12345\",\"appkey\":\"MYAPPKEY\",\"dev_eui\":\"0123456789ABCDEF\",\"client-ip\":\"localhost\"}" (:body response))))))
