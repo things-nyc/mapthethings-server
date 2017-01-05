@@ -168,8 +168,10 @@
     (-> ips (clojure.string/split #",") first)
     (:remote-addr req)))
 
-(defn parse-msg-sent-request [{params :params :as req}]
-  (let [slat (:latitude params (:lat params))
+(defn parse-msg-sent-request [{body :body :as req}]
+  (let [json (slurp body)
+        params (json/read-str json :key-fn keyword)
+        slat (:latitude params (:lat params))
         lat (data/parse-lat slat)
         slon (:longitude params (:lng params (:lon params)))
         lon (data/parse-lon slon)]
@@ -180,7 +182,6 @@
         :lat lat :lon lon
         :timestamp (or (:timestamp params) (current-timestamp))
         :msg_seq (:msg_seq params)
-        :appkey (:appkey params)
         :dev_eui (:dev_eui params)
         :client-ip (get-client-ip req)}
        , nil])))
@@ -190,13 +191,13 @@
   (GET "/api/v0/grids/:lat1/:lon1/:lat2/:lon2"
     [lat1 lon1 lat2 lon2 :as request]
     (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
-  (POST "/api/v0/msg-sent" req
+  (POST "/api/v0/transmissions" req
     (let [[msg, error-msg] (parse-msg-sent-request req)]
       (if msg
         (msg-sent-response msg (prn-str (:params req)))
         (error-response 400 error-msg))))
   (ANY "*" []
-       (route/not-found (slurp (io/resource "404.html")))))
+    (route/not-found (slurp (io/resource "404.html")))))
 
 (defn wrap-services [f services]
   (fn [req]
@@ -204,6 +205,7 @@
 
 (defn wrap-log-request [f]
   (fn [req]
+    ; Don't slurp the :body here without replacing it. You'll hit EOF trying to slurp it later.
     (log/info "log-request:" (str req))
     (f req)))
 
