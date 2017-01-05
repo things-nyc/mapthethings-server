@@ -109,12 +109,6 @@
   })
 
   var makeMarker = function (cell) {
-    // var marker = L.polygon([
-    //     [cell.lat1, cell.lon1],
-    //     [cell.lat2, cell.lon1],
-    //     [cell.lat2, cell.lon2],
-    //     [cell.lat1, cell.lon2]
-    // ])
     // SNR (dBm): -20 (Red) -11 (Orange) -4 (Green)
     var snr = cell.lsnr.avg
     var signal_color = 'red'
@@ -127,7 +121,7 @@
     else if (snr>=-11) {
       signal_color = 'orange'
     }
-    var attempts = cell["attemp-cnt"]
+    var attempts = cell["attempt-cnt"]
     var successes = cell["success-cnt"]
     if (attempts<successes) {
       successes = attempts
@@ -146,7 +140,14 @@
         pct_color = 'red'
       }
     }
-    var marker = L.circleMarker([cell.clat, cell.clon], {
+    // var marker = L.polygon([
+    //     [cell.lat1, cell.lon1],
+    //     [cell.lat2, cell.lon1],
+    //     [cell.lat2, cell.lon2],
+    //     [cell.lat1, cell.lon2]
+    // ],
+    var marker = L.circleMarker([cell.clat, cell.clon],
+      {
       stroke: true,
       color: signal_color,
       fillColor: pct_color,
@@ -162,7 +163,7 @@
         (cell["import-cnt"]>0 ? " Imported: " + cell["import-cnt"]: "")
         : "") +
       (attempts>0 ?
-        "<br/>Packet loss: " + roundStat(100 * (1 - (successes / attempts))) + "(" + failed + "/" + attempts + ")"
+        "<br/>Packet loss: " + roundStat(100.0 * (1.0 - (successes / attempts))) + "% (" + failed + "/" + attempts + ")"
         : "") +
       (cell.count>0 ?
         "<br/>SNR: " + roundStat(cell.lsnr.avg) + " (sd: " + roundStat(cell.lsnr.std) + ")" +
