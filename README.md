@@ -1,4 +1,4 @@
-![Travis Build Status](https://travis-ci.org/things-nyc/mapthethings-server.svg?branch=master)
+[![Build Status](https://travis-ci.org/things-nyc/mapthethings-server.svg?branch=master)](https://travis-ci.org/things-nyc/mapthethings-server)
 
 # MapTheThings-Server
 
@@ -23,10 +23,12 @@ global coverage map for The Things Network (TTN).
 2. Custom Nodes
   You are welcome to create your own TTN nodes and use them to
   transmit GPS coordinates to the Map The Things server.</p>
-   - AppSKey: ```430D53B272A647AF5DFF6A167AB79A20```
-   - NwkSKey: ```804243642C1E3B04366D36C3909FCAA2```
-   - Data: Send text strings of the form
-      ```{"lat":40.7128,"lng":-74.0059}``` or just ```40.7128,-74.0059```
+   - AppEUI: ```70B3D57ED00001B0```
+   - Data: Send lat/lon in 7 byte packets with the structure
+     Byte 00:    Value 0x01 - Format indicator.
+     Byte 01-03: Latitude encoding. Little endian integer. ```latitude = (encoding / 93206.0)```
+     Byte 04-06: Longitude encoding. Little endian integer. ```longitude = (encoding / 46603.0)```
+   - Send me a DevEUI and I'll register it with the app and give you an app key.
 
 3. Upload Data
   If you want to upload existing map data, submit a pull request with your
@@ -57,9 +59,8 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - Load TTNmapper data: ttnmapper.org/dumps
 - Share our data in an S3 bucket
 - Include histogram of spreading factor in summary data
-- Accept binary data packets. Fixed point reals: lat,lon,alt,hdop
-- Take latitude, longitude, altitude, and HDOP (horizontal dilution of precision)
-- Plot shape of points (d3.delauney filterd by alpha)
+- Accept latitude, longitude, altitude, and HDOP (horizontal dilution of precision)
+- Plot shape of points (d3.delauney filtered by alpha)
 - Make map take entire viewport with text in overlays
 
 ### DONE
@@ -79,6 +80,8 @@ This is a current work in progress as of Summer 2016. We welcome pull requests.
 - DONE - Restart MQTT connection periodically. Saw "org.eclipse.paho.client.mqttv3.internal.ClientState checkForActivity
    SEVERE: frank.1464903570129: Timed out as no activity, keepAlive=60,000 lastOutboundActivity=1,464,905,984,787 lastInboundActivity=1,464,905,130,918". Suffered from connection having been dropped when testing node.
    Rely on :keep-alive-interval to trigger failure, but then actually reconnect and re-subscribe.
+- DONE - Accept binary data packets. Fixed point reals: lat,lon
+
 
 ## Hosting
 The server is hosted on Heroku and uses Amazon S3 and SQS for storage and queuing.

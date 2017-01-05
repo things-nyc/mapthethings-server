@@ -42,11 +42,15 @@
     <p>You are welcome to create your own nodes and use them to
     transmit GPS coordinates to the Map The Things server.</p>
     <ul>
-      <li>AppSKey:&nbsp;<code>430D53B272A647AF5DFF6A167AB79A20</code></li>
-      <li>NwkSKey:&nbsp;<code>804243642C1E3B04366D36C3909FCAA2</code></li>
-      <li>Data:&nbsp;Send text strings (UTF-8 encoded bytes) in the form
-        <code>{"lat":40.7128,"lng":-74.0059}</code> or just
-        <code>40.7128,-74.0059</code></li>
+      <li>AppEUI:&nbsp;<code>70B3D57ED00001B0</code></li>
+      <li>DevEUI:&nbsp;Send me a DevEUI and I'll register it with the app and give you an app key</li>
+      <li>Data:&nbsp;Send lat/lon in 7 byte packets with the structure
+        <ul>
+          <li>Byte 00:&nbsp;Format indicator. <code>0x01</code></li>
+          <li>Byte 01-03:&nbsp;Latitude encoding. Little endian integer. <code>encoding = (latitude * 93206.0)</code></li>
+          <li>Byte 04-06:&nbsp;Longitude encoding. Little endian integer. <code>encoding = (longitude * 46603.0)</code></li>
+        </ul>
+      </li>
     </ul>
   <h3>3. Map The Things - App &amp; Node</h3>
     <p>This option is not available because I have not yet written the app or built the node.</p>
