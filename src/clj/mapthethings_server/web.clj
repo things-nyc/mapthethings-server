@@ -222,15 +222,16 @@
        (wrap-defaults api-defaults)
        #_(wrap-log-request)))))
 
-(defn connect-to-ttn []
+(defn connect-to-mqtt [mqtt-url username password]
   (let [work-channel (ttn-handler)
         id   (mh/generate-id)
-        mqtt-url (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883")
-        mqtt-opts {:username (env :ttn-app-eui) :password (env :ttn-access-password)
-                   :keep-alive-interval 60 #_seconds}]
+        mqtt-opts {:username username
+                   :password password
+                   :keep-alive-interval 60 #_:seconds}]
+        ; _ (println "URL:" mqtt-url "Options:" mqtt-opts)]
    (letfn [
            (resubscribe [e]
-             (log/error e "TTN Disconnected")
+             (log/error e (str "TTN Disconnected from" mqtt-url))
              (subscribe)
              (log/info "Resubscribed to TTN at" mqtt-url))
            (subscribe []
@@ -242,6 +243,10 @@
                {:on-connection-lost resubscribe}))]
        (subscribe)
        (log/info "Subscribed to TTN at" mqtt-url))))
+
+(defn connect-to-ttn []
+  (connect-to-mqtt (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883") (env :ttn-app-eui) (env :ttn-access-password))
+  (connect-to-mqtt (env :ttnv2-mqtt-url "tcp://eu.thethings.network:1883") (env :ttnv2-app-id) (env :ttnv2-access-key)))
 
 #_(let [ddb (geo/get-ddb)
         manager (geo/geo-manager ddb)]
