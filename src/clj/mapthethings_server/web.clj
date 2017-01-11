@@ -151,13 +151,13 @@
 
 (defn msg-sent-response [msg req-body]
   (try
-      (log/debug "Received msg-sent-packet" msg)
+      (log/debug "Received transmissions-packet" msg)
       (handle-msg msg req-body)
       {:status 201 ; HTTP "Created"
        :headers {"Content-Type" "application/json"}
        :body (json/write-str msg :escape-slash false)}
     (catch Exception e
-      (let [error-msg (format "Failed to handle msg-sent [%s]." (str msg))]
+      (let [error-msg (format "Failed to handle transmissions-packet [%s]." (str msg))]
         (log/error e error-msg)
         (error-response 500 error-msg)))))
 
@@ -176,7 +176,7 @@
         slon (:longitude params (:lng params (:lon params)))
         lon (data/parse-lon slon)]
     (if (or (nil? lat) (nil? lon))
-      [nil, (format "Invalid msg-sent lat/lon: %s/%s" slat slon)]
+      [nil, (format "Invalid transmissions-packet lat/lon: %s/%s" slat slon)]
       [{
         :type "attempt"
         :lat lat :lon lon

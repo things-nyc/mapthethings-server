@@ -89,7 +89,7 @@ Bytes representing UTF-8 encoded string that contains either JSON
   ```
   {
   ```
-- PUT /api/v0/msg-sent - Write that an attempt was made
+- PUT /api/v0/transmissions - Write that an attempt was made
   ```
   {
     appkey: [MapTheThings App Key] // Connects this API call to a particular user.
