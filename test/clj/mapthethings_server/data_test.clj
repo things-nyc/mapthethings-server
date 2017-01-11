@@ -81,7 +81,28 @@
 
 (deftest payload-48bit-test
   (testing "parse 48 bit lat/lon payload"
-    (let [payload (byte-array [0x20 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
+    (let [payload (byte-array [0x01 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
           msg (decode-48bit-payload payload)]
+      (is (float= 40.6714 (:lat msg)))
+      (is (float= -73.9863 (:lon msg))))))
+
+(deftest parse-byte-packet-test
+  (testing "parse MTT packet (format + 48 bit lat/lon payload)"
+    (let [payload (byte-array [0x01 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
+          msg (decode-byte-payload payload "fake-encoded")]
+      (is (not (:test-msg msg)))
+      (is (not (:tracked msg)))
+      (is (float= 40.6714 (:lat msg)))
+      (is (float= -73.9863 (:lon msg))))
+    (let [payload (byte-array [0x02 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
+          msg (decode-byte-payload payload "fake-encoded")]
+      (is (not (:test-msg msg)))
+      (is (:tracked msg))
+      (is (float= 40.6714 (:lat msg)))
+      (is (float= -73.9863 (:lon msg))))
+    (let [payload (byte-array [0x81 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
+          msg (decode-byte-payload payload "fake-encoded")]
+      (is (not (:tracked msg)))
+      (is (:test-msg msg))
       (is (float= 40.6714 (:lat msg)))
       (is (float= -73.9863 (:lon msg))))))

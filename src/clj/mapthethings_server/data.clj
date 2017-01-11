@@ -49,17 +49,21 @@
         lon (/ lon 46603.0)]
     {:lat lat :lon lon}))
 
-(defn decode-payload [encoded]
+(defn decode-byte-payload [bytes encoded]
   ; Parse bytes as packed lat/lon or JSON or other formats
-  (let [bytes (b64/decode (.getBytes encoded))
-        len (alength bytes)
+  (let [len (alength bytes)
         lat-lon (case (bit-and 0xFF (aget bytes 0))
                   0x01 (decode-48bit-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
-                  0x81 (assoc (decode-48bit-payload bytes) :test-msg true) ; 01 112233 112233 (little endian 24bit lat, lon)
+                  0x02 (assoc (decode-48bit-payload bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
+                  0x81 (assoc (decode-48bit-payload bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
                   (decode-json-payload bytes))]
     (if (and (:lat lat-lon) (:lon lat-lon))
       lat-lon
-      {:error (str "Unable to parse lat/lon from " encoded)})))
+      {:error (str "Unable to parse lat/lon from " bytes)})))
+
+(defn decode-payload [encoded]
+  ; Parse bytes as packed lat/lon or JSON or other formats
+  (decode-byte-payload (b64/decode (.getBytes encoded)) encoded))
 
 ; Format of message from TTN
 ; {
