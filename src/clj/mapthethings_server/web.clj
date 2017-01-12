@@ -131,17 +131,18 @@
             (log/error e (str "Failed processing SQS message"  (:message-id msg)))))))
     (recur)))
 
-(defn ttn-handler []
+(defn ttn-handler [extract-data]
   (let [in (chan)]
     (go-loop []
       (when-let [ttn-string (<! in)]
         (try
           (log/debug "Received ttn-string" ttn-string)
-          (let [ttn (data/ttn-string->clj ttn-string)
-                err (get-in ttn [:payload :error])]
+          (let [json (data/parse-json-string ttn-string)
+                msg (extract-data json)
+                err (:error msg)]
             (if err
               (log/error (str "Failed to handle TTN message. " err))
-              (let [msg (data/ttn->msg ttn)]
+              (do
                 (log/debug "Converted to msg:" msg)
                 (handle-msg msg ttn-string))))
           (catch Exception e
@@ -222,8 +223,8 @@
        (wrap-defaults api-defaults)
        #_(wrap-log-request)))))
 
-(defn connect-to-mqtt [mqtt-url username password]
-  (let [work-channel (ttn-handler)
+(defn connect-to-mqtt [mqtt-url username password parser]
+  (let [work-channel (ttn-handler parser)
         id   (mh/generate-id)
         mqtt-opts {:username username
                    :password password
@@ -245,8 +246,14 @@
        (log/info "Subscribed to TTN at" mqtt-url))))
 
 (defn connect-to-ttn []
-  (connect-to-mqtt (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883") (env :ttn-app-eui) (env :ttn-access-password))
-  (connect-to-mqtt (env :ttnv2-mqtt-url "tcp://eu.thethings.network:1883") (env :ttnv2-app-id) (env :ttnv2-access-key)))
+  (connect-to-mqtt
+    (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883")
+    (env :ttn-app-eui) (env :ttn-access-password)
+    data/msg-from-ttn-v1)
+  (connect-to-mqtt
+    (env :ttnv2-mqtt-url "tcp://eu.thethings.network:1883")
+    (env :ttnv2-app-id) (env :ttnv2-access-key)
+    data/msg-from-ttn-v2))
 
 #_(let [ddb (geo/get-ddb)
         manager (geo/geo-manager ddb)]

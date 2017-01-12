@@ -4,7 +4,7 @@
             [ring.mock.request :refer :all]
             [mapthethings-server.data :refer :all]))
 
-(def test-ttn-string
+(def test-ttn-string-v1
   ; Code: (clojure.string/upper-case (apply str (map #(format "%02x" (int %)) (.getBytes "{\"msgid\": \"[UNIQUE_MSG_ID]\", \"appkey\": \"[APP_KEY]\", \"longitude\":-74.0059, \"latitude\":40.7128}"))))
 
   ; Payload: {"msgid": "[UNIQUE_MSG_ID]", "appkey": "[APP_KEY]", "longitude":25.0, "latitude":25.0}
@@ -14,7 +14,7 @@
   ; Hex: 7B226D73676964223A20225B554E495155455F4D53475F49445D222C20226170706B6579223A20225B5448494E4753425552475F4150505F4B45595D222C20226C6F6E676974756465223A2D37342E303035392C20226C61746974756465223A34302E373132387D
 
   "{
-    \"payload\":\"eyJtc2dpZCI6ICJbVU5JUVVFX01TR19JRF0iLCAiYXBwa2V5IjogIltUSElOR1NCVVJHX0FQUF9LRVldIiwgImxvbmdpdHVkZSI6MjUuMCwgImxhdGl0dWRlIjoyNS4wfQ==\",
+    \"payload\":\"AfHXOVBjyw==\",
     \"port\":1,
     \"counter\":4,
     \"dev_eui\":\"00000000DEADBEEF\",
@@ -41,24 +41,66 @@
   }
 ")
 
-(deftest ttn-parse-test
-  (testing "parse ttn string as a clj map with keywords"
-    (let [msg (ttn-string->clj test-ttn-string)]
-      (is (some? (:lat msg)))
-      (is (some? (:lon msg)))
-      (is (some? (:rssi msg)))
-      (is (some? (:lsnr msg))))))
+(def test-ttn-string-v2
+  "{
+    \"port\": 1,
+    \"counter\": 0,
+    \"payload_raw\": \"AfHXOVBjyw==\",
+    \"payload_fields\": {
+      \"led\": true
+    },
+    \"metadata\": {
+      \"time\": \"2016-09-13T09:59:08.179119279Z\",
+      \"frequency\": 868.3,
+      \"modulation\": \"LORA\",
+      \"data_rate\": \"SF7BW125\",
+      \"coding_rate\": \"4/5\",
+      \"gateways\":
+      [{
+        \"eui\": \"B827EBFFFE87BD22\",
+        \"timestamp\": 1489443003,
+        \"time\": \"2016-09-13T09:59:08.167028Z\",
+        \"channel\": 1,
+        \"rssi\": -49,
+        \"snr\": 8,
+        \"rf_chain\": 1
+      }]
+    }
+  }")
 
 
 (deftest ttn-parse-test
-  (testing "parse ttn string as a clj map with keywords"
-    (let [ttn (ttn-string->clj test-ttn-string)
-          msg (ttn->msg ttn)]
+  (testing "parse v1/staging ttn string as a clj map with keywords"
+    (let [msg (parse-json-string test-ttn-string-v1)]
+      (is (some? (:payload msg)))
+      (is (some? (:port msg)))
+      (is (some? (get-in msg [:metadata 0 :rssi])))
+      (is (some? (get-in msg [:metadata 0 :lsnr])))))
+  (testing "parse v2 ttn string as a clj map with keywords"
+    (let [msg (parse-json-string test-ttn-string-v2)]
+      (is (some? (:payload_raw msg)))
+      (is (some? (:payload_fields msg)))
+      (is (some? (:port msg)))
+      (is (some? (get-in msg [:metadata :gateways 0 :rssi])))
+      (is (some? (get-in msg [:metadata :gateways 0 :snr]))))))
+
+(deftest ttn-msg-parse-test
+  (testing "parse staging ttn map as a msg map"
+    (let [ttn (parse-json-string test-ttn-string-v1)
+          msg (msg-from-ttn-v1 ttn)]
+      (is (not (:payload msg)))
       (is (some? (:lat msg)))
       (is (some? (:lon msg)))
       (is (= (:rssi msg) (float -5)))
-      (is (= (:lsnr msg) (float 5.3))))))
-
+      (is (= (:lsnr msg) (float 5.3)))))
+  (testing "parse v2 ttn map as a msg map"
+    (let [ttn (parse-json-string test-ttn-string-v2)
+          msg (msg-from-ttn-v2 ttn)]
+      (is (not (:payload_raw msg)))
+      (is (some? (:lat msg)))
+      (is (some? (:lon msg)))
+      (is (= (:rssi msg) (float -49)))
+      (is (= (:lsnr msg) (float 8))))))
 
 (deftest extract-24bit-test
   (testing "extract 24 bit value"

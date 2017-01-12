@@ -6,22 +6,6 @@
             [clojure.data.json :as json]
             [environ.core :refer [env]]))
 
-(defn ttn->msg
-  "Takes a ttn message and returns a simplified map containing just
-  :lat, :lon, :rssi, and :lsnr"
-  [ttn]
-  (log/debug ttn)
-  (let [msg {
-              :type "ttn"
-              :lat (get-in ttn [:payload :lat])
-              :lon (get-in ttn [:payload :lon])
-              :rssi (float (get-in ttn [:metadata 0 :rssi] 0))
-              :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0))}]
-
-    (if (get-in ttn [:payload :test-msg])
-      (assoc msg :test-msg true)
-      msg)))
-
 (defn decode-json-payload [bytes]
   (let [json-string (String. bytes)
         lat-lon (json/read-str json-string :key-fn keyword)
@@ -43,29 +27,33 @@
        (bit-and 0xff (int low))))))
 
 (defn decode-48bit-payload [bytes]
-  (let [lat (extract-24bit bytes 1)
-        lat (/ lat 93206.0)
-        lon (extract-24bit bytes 4)
-        lon (/ lon 46603.0)]
-    {:lat lat :lon lon}))
+  (if (not= 7 (alength bytes))
+    {:error (str "Unable to parse lat/lon from" (alength bytes) "bytes")}
+    (let [lat (extract-24bit bytes 1)
+          lat (/ lat 93206.0)
+          lon (extract-24bit bytes 4)
+          lon (/ lon 46603.0)]
+      {:lat lat :lon lon})))
 
 (defn decode-byte-payload [bytes encoded]
   ; Parse bytes as packed lat/lon or JSON or other formats
-  (let [len (alength bytes)
-        lat-lon (case (bit-and 0xFF (aget bytes 0))
-                  0x01 (decode-48bit-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
-                  0x02 (assoc (decode-48bit-payload bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
-                  0x81 (assoc (decode-48bit-payload bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
-                  (decode-json-payload bytes))]
-    (if (and (:lat lat-lon) (:lon lat-lon))
-      lat-lon
-      {:error (str "Unable to parse lat/lon from " bytes)})))
+  (let [len (alength bytes)]
+    (if (= 0 len)
+      {:error (str "Unable to parse lat/lon from no bytes")}
+      (let [lat-lon (case (bit-and 0xFF (aget bytes 0))
+                      0x01 (decode-48bit-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
+                      0x02 (assoc (decode-48bit-payload bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
+                      0x81 (assoc (decode-48bit-payload bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
+                      (decode-json-payload bytes))]
+        (if (and (:lat lat-lon) (:lon lat-lon))
+          lat-lon
+          {:error (str "Unable to parse lat/lon from " bytes)})))))
 
 (defn decode-payload [encoded]
   ; Parse bytes as packed lat/lon or JSON or other formats
   (decode-byte-payload (b64/decode (.getBytes encoded)) encoded))
 
-; Format of message from TTN
+; Format of V1(staging) message from TTN
 ; {
 ;   "payload":"{ // b64 encoded bytes
 ;      We support
@@ -98,9 +86,57 @@
 ;   ]
 ; }
 
-(defn ttn-string->clj [json-string]
-  (-> (json/read-str json-string :key-fn keyword)
-    (update :payload decode-payload)))
+; Format of V2 message from TTN
+; {
+;   "port": 1,
+;   "counter": 0,
+;   "payload_raw": "AQ==",
+;   "payload_fields": {
+;     "led": true
+;   },
+;   "metadata": {
+;     "time": "2016-09-13T09:59:08.179119279Z",
+;     "frequency": 868.3,
+;     "modulation": "LORA",
+;     "data_rate": "SF7BW125",
+;     "coding_rate": "4/5",
+;     "gateways": [{
+;       "eui": "B827EBFFFE87BD22",
+;       "timestamp": 1489443003,
+;       "time": "2016-09-13T09:59:08.167028Z",
+;       "channel": 1,
+;       "rssi": -49,
+;       "snr": 8,
+;       "rf_chain": 1
+;     }]
+;   }
+; }
+
+
+
+
+(defn parse-json-string [json-string]
+  (json/read-str json-string :key-fn keyword))
+
+(defn msg-from-ttn-v1
+  "Takes a ttn v1 message and returns a simplified map containing just
+  :type, :lat, :lon, :rssi, :lsnr, :test-msg, and :error if there was a problem."
+  [ttn]
+  (log/debug ttn)
+  (-> (decode-payload (:payload ttn))
+    (assoc :type "ttn")
+    (assoc :rssi (float (get-in ttn [:metadata 0 :rssi] 0)))
+    (assoc :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0)))))
+
+(defn msg-from-ttn-v2 [ttn]
+  "Takes a ttn v2 message and returns a simplified map containing just
+  :type, :lat, :lon, :rssi, :lsnr, :test-msg, and :error if there was a problem."
+  [ttn]
+  (log/debug ttn)
+  (-> (decode-payload (:payload_raw ttn))
+    (assoc :type "ttn")
+    (assoc :rssi (float (get-in ttn [:metadata :gateways 0 :rssi] 0)))
+    (assoc :lsnr (float (get-in ttn [:metadata :gateways 0 :snr] 0)))))
 
 (defn parse-lat [s]
   (cond
