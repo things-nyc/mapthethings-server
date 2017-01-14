@@ -7,11 +7,14 @@
             [clojure.data.json :as json]
             [ring.adapter.jetty :as jetty]
             [ring.middleware.params :refer [wrap-params]]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.defaults :refer :all]
+            #_[ring.middleware.stacktrace :as trace]
             [environ.core :refer [env]]
             [mapthethings-server.geo :as geo]
             [mapthethings-server.grids :as grids]
             [mapthethings-server.data :as data]
+            [mapthethings-server.sms :as sms]
             [clojurewerkz.machine-head.client :as mh]
             [amazonica.aws.s3 :as s3]
             [amazonica.aws.sqs :as sqs]
@@ -187,16 +190,22 @@
         :client-ip (get-client-ip req)}
        , nil])))
 
+(defn handle-transmission-notice [req]
+  (let [[msg, error-msg] (parse-msg-sent-request req)]
+    (if msg
+      (msg-sent-response msg (prn-str (:params req)))
+      (error-response 400 error-msg))))
+
 (defroutes routes
   (GET "/" [] (splash))
   (GET "/api/v0/grids/:lat1/:lon1/:lat2/:lon2"
-    [lat1 lon1 lat2 lon2 :as request]
+    [lat1 lon1 lat2 lon2]
     (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
-  (POST "/api/v0/transmissions" req
-    (let [[msg, error-msg] (parse-msg-sent-request req)]
-      (if msg
-        (msg-sent-response msg (prn-str (:params req)))
-        (error-response 400 error-msg))))
+  (POST "/api/v0/transmissions" req (handle-transmission-notice req))
+
+  (POST "/sms/in" req (sms/handle-incoming req))
+  (POST "/sms/status" req (sms/handle-status req))
+
   (ANY "*" []
     (route/not-found (slurp (io/resource "404.html")))))
 
@@ -208,6 +217,7 @@
   (fn [req]
     ; Don't slurp the :body here without replacing it. You'll hit EOF trying to slurp it later.
     (log/info "log-request:" (str req))
+    #_(println "log-request:" (str req))
     (f req)))
 
 (defn make-app
@@ -221,7 +231,10 @@
      (-> routes
       ;(wrap-services services)
        (wrap-defaults api-defaults)
-       #_(wrap-log-request)))))
+       (wrap-keyword-params)
+       (wrap-params)
+       (wrap-log-request)
+       #_(trace/wrap-stacktrace)))))
 
 (defn connect-to-mqtt [mqtt-url username password parser]
   (let [work-channel (ttn-handler parser)
@@ -236,7 +249,8 @@
              (subscribe)
              (log/info "Resubscribed to TTN at" mqtt-url))
            (subscribe []
-      ;; Topic: <AppEUI>/devices/<DevEUI>/up
+             ; Topic: <AppEUI>/devices/<DevEUI>/up
+             ; TODO: Restrict subscription to single app ID
              (mh/subscribe (mh/connect mqtt-url id mqtt-opts) {"+/devices/+/up" 0} ; 0 QOS is fire-and-forget
                (fn [^String topic metadata ^bytes mqtt-msg]
                  (let [json-string-msg (String. mqtt-msg "UTF-8")]
@@ -266,6 +280,7 @@
         app (make-app)
         sqs-channel (sqs-handler)]
     (log/info "Binding to:" (str port))
+    (sms/init)
     (connect-to-ttn)
     (jetty/run-jetty app {:port port :join? false})))
 
