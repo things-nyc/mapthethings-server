@@ -3,7 +3,7 @@
             [clojure.data.json :as json]
             [clojure.core.cache :as cache]
             [clojure.core.async
-             :refer [>! <! >!! <!! go chan close! merge timeout]]
+             :refer [>! <! >!! <!! go chan close! timeout]]
             [clojure.tools.logging :as log]
             [ring.mock.request :refer :all]
             [mapthethings-server.grids :refer :all]))

@@ -11,11 +11,12 @@
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.cache "0.6.5"]
                  [ch.hsr/geohash "1.3.0"]
+                 [com.twilio.sdk/twilio "7.4.0"]
                  [log4j/log4j "1.2.17" :exclusions [javax.mail/mail
                                                     javax.jms/jms
                                                     com.sun.jmdk/jmxtools
                                                     com.sun.jmx/jmxri]]
-                 [compojure "1.5.1"]
+                 [compojure "1.5.2"]
                  [ring/ring-jetty-adapter "1.5.0"]
                  [ring/ring-defaults "0.2.1"]
                  [environ "1.1.0"]
