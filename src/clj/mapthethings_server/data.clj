@@ -26,28 +26,47 @@
        (bit-shift-left (bit-and 0xff (int mid)) 8) ; and to chop sign extension
        (bit-and 0xff (int low))))))
 
-(defn decode-48bit-payload [bytes]
+(defn decode-lat-lon-payload [bytes]
   (if (not= 7 (alength bytes))
     {:error (str "Unable to parse lat/lon from" (alength bytes) "bytes")}
     (let [lat (extract-24bit bytes 1)
           lat (/ lat 93206.0)
           lon (extract-24bit bytes 4)
           lon (/ lon 46603.0)]
-      {:lat lat :lon lon})))
+      {:lat lat :lon lon :mtt true})))
+
+(defn extract-phone [bytes offset digit-count]
+  (let [nibbles (reduce (fn [nibs b] (concat nibs [(bit-and 0x0f (bit-shift-right b 4)) (bit-and 0x0f b)])) [] (drop offset (vec bytes)))
+        digits (map #(char (+ (int \0) %)) nibbles)]
+    (apply str (take digit-count digits))))
+
+(defn extract-message [bytes offset]
+  (let [bytes (drop offset (vec bytes))]
+    (apply str (map char bytes))))
+
+(defn decode-sms-message [bytes]
+  ;03 0A 16 46 55 55 55 50 M e s s a g e
+  (let [phone-digit-count (aget bytes 1)
+        phone (extract-phone bytes 2 phone-digit-count)
+        phone-len (/ (inc phone-digit-count) 2)
+        msg (extract-message bytes (+ 2 phone-len))]
+    {:message msg
+     :phone (str "+" phone)
+     :sms true}))
 
 (defn decode-byte-payload [bytes encoded]
   ; Parse bytes as packed lat/lon or JSON or other formats
   (let [len (alength bytes)]
     (if (= 0 len)
       {:error (str "Unable to parse lat/lon from no bytes")}
-      (let [lat-lon (case (bit-and 0xFF (aget bytes 0))
-                      0x01 (decode-48bit-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
-                      0x02 (assoc (decode-48bit-payload bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
-                      0x81 (assoc (decode-48bit-payload bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
-                      (decode-json-payload bytes))]
-        (if (and (:lat lat-lon) (:lon lat-lon))
-          lat-lon
-          {:error (str "Unable to parse lat/lon from " bytes)})))))
+      (let [decoded (case (bit-and 0xFF (aget bytes 0))
+                      0x01 (decode-lat-lon-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
+                      0x02 (assoc (decode-lat-lon-payload bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
+                      0x03 (decode-sms-message bytes) ; 03 0A 16 46 55 55 55 50 M e s s a g e
+                      0x81 (assoc (decode-lat-lon-payload bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
+                      ; (decode-json-payload bytes)
+                      {:error (str "Unable to parse packet: " bytes)})]
+        decoded))))
 
 (defn decode-payload [encoded]
   ; Parse bytes as packed lat/lon or JSON or other formats
@@ -111,8 +130,6 @@
 ;     }]
 ;   }
 ; }
-
-
 
 
 (defn parse-json-string [json-string]

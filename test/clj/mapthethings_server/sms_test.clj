@@ -13,7 +13,7 @@
 (deftest send-message-test
   (testing "sending a Twilio message"
     (sms/init)
-    (let [msg-sid (sms/send-message (env :twilio-test-number) "Testing")]
+    (let [msg-sid (sms/send-message {:phone (env :twilio-test-number) :message "Testing"})]
       (is (not (nil? msg-sid))))))
 
 (deftest msg-inbound-test

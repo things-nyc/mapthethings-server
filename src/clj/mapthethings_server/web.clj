@@ -55,7 +55,9 @@
   (grids/write-s3-as-json grids/raw-bucket msg-id (assoc msg :aws-id msg-id)))
 
 (defn handle-msg [msg raw]
-  (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw})))
+  (cond
+    (:sms msg) (sms/send-message msg)
+    (:mtt msg) (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw}))))
 
 (defn wait-all
   "Waits for all channels and timeout in msecs. Returns true if succeeded."

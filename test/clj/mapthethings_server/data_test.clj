@@ -121,10 +121,10 @@
         scale (if (or (zero? x) (zero? y)) 1 (Math/abs x))]
     (<= (Math/abs (- x y)) (* scale epsilon))))
 
-(deftest payload-48bit-test
+(deftest payload-lat-lon-test
   (testing "parse 48 bit lat/lon payload"
     (let [payload (byte-array [0x01 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
-          msg (decode-48bit-payload payload)]
+          msg (decode-lat-lon-payload payload)]
       (is (float= 40.6714 (:lat msg)))
       (is (float= -73.9863 (:lon msg))))))
 
@@ -148,3 +148,10 @@
       (is (:test-msg msg))
       (is (float= 40.6714 (:lat msg)))
       (is (float= -73.9863 (:lon msg))))))
+
+(deftest parse-sms-packet
+  (testing "parse sms packet (format phonelen message)")
+  (let [payload (byte-array (vec (concat [0x03 0x0B 0x16 0x46 0x18 0x84 0x56 0x70] (.getBytes "Message" "UTF-8"))))
+        msg (decode-byte-payload payload "fake-encoded")]
+    (is (= "+16461884567" (:phone msg)))
+    (is (= "Message" (:message msg)))))

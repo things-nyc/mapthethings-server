@@ -17,14 +17,17 @@
            [com.twilio.type PhoneNumber])
   (:gen-class))
 
+; Fmt phonelen    phone-digits       msg-bytes)
+;  03    0B    16 46 95 76 94 40   M e s s a g e)
+
 (defn init []
   (Twilio/init (env :twilio-account-sid) (env :twilio-auth-token)))
 
 (def from_phone (PhoneNumber. (env :twilio-phone-number)))
 
-(defn send-message [phone text]
+(defn send-message [{:keys [phone message]}]
   (let [to_phone (PhoneNumber. phone)
-        creator (Message/creator to_phone from_phone text)
+        creator (Message/creator to_phone from_phone message)
         message (.create creator)]
     (.getSid message)))
 
