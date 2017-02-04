@@ -55,6 +55,16 @@
      :phone (str "+" phone)
      :sms true}))
 
+(defn decode-multipart-part [bytes]
+  ;04 XN b y t e s
+  (let [count (inc (bit-and 0x0F (aget bytes 1)))
+        index (bit-and 0x0F (bit-shift-right (aget bytes 1) 4))
+        payload (drop 2 (vec bytes))]
+    {:multipart true
+     :count count
+     :index index
+     :payload payload}))
+
 (defn decode-byte-payload [bytes encoded]
   ; Parse bytes as packed lat/lon or JSON or other formats
   (let [len (alength bytes)]
@@ -64,6 +74,7 @@
                       0x01 (decode-lat-lon-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
                       0x02 (assoc (decode-lat-lon-payload bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
                       0x03 (decode-sms-message bytes) ; 03 0A 16 46 55 55 55 50 M e s s a g e
+                      0x04 (decode-multipart-part bytes) ; 04 XN aa bb cc dd
                       0x81 (assoc (decode-lat-lon-payload bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
                       ; (decode-json-payload bytes)
                       {:error (str "Unable to parse packet: " bytes)})]
@@ -180,3 +191,10 @@
         (if-let [west (fnext (re-matches #"([\.\d]+)[Ww]" s))]
           (- (edn/read-string west))
           (edn/read-string s)))))
+
+(defn merge-multipart [parts]
+  (let [parts (sort-by :index parts)
+        [err _] (reduce (fn [[err i] p] [(cond err err (not= i (:index p)) {:error (str "Missing part #" i)}) (inc i)]) [nil 0] parts)]
+    (if err err
+      {:payload (byte-array (reduce (fn [b p] (concat b (vec (:payload p)))) [] parts))
+       :count (count parts)})))

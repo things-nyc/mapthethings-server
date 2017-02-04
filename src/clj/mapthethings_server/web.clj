@@ -54,9 +54,39 @@
 (defn store-raw-msg [msg-id msg]
   (grids/write-s3-as-json grids/raw-bucket msg-id (assoc msg :aws-id msg-id)))
 
+(def handle-msg) ; Forward declaration
+
+(defn handle-completed-multiparts [_key parts-atom old new]
+  "Watches for changes to a collection of parts. If collection is complete, combine and remove it."
+  (let [completed (filter new (fn [[_ parts]] (:completed parts false)))
+        newly_completed (filter completed (fn [[dev_eui _]] (not (get-in old [dev_eui :completed] false))))]
+    (doseq [[dev_eui parts] newly_completed]
+      (let [msg (data/merge-multipart (vals parts))
+            msg (if (:error msg) msg (data/decode-byte-payload (:payload msg) msg))]
+        (swap! parts-atom dissoc dev_eui)
+        (handle-msg msg (str parts) "Multipart TTN")))))
+
+(def parts-atom
+  "Holds a Map of dev_eui -> Map of multipart parts"
+  (let [parts (atom {})]
+    (add-watch parts {} handle-completed-multiparts)
+    parts))
+
+(defn hold-multipart [msg]
+  (let [dev_eui (:dev_eui msg)
+        index (:index msg)
+        count (:count msg)]
+    (swap! parts-atom #(-> %
+                        (assoc-in [dev_eui index] msg)
+                        ((fn [pm]
+                          (if (= count (count (get pm dev_eui)))
+                            (assoc-in pm [dev_eui :completed] true)
+                            pm)))))))
+
 (defn handle-msg [msg raw msg-type]
   (cond
     (:error msg) (log/error (str "Failed to handle " msg-type " message: " (:error msg)))
+    (:multipart msg) (hold-multipart msg)
     (:sms msg) (sms/send-message msg)
     (:mtt msg) (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw}))
     :else (log/error (str "Unknown " msg-type " message in handle-msg:" msg raw))))
@@ -204,6 +234,7 @@
     (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
   (POST "/api/v0/transmissions" req (handle-transmission-notice req))
 
+  ; SMS
   (POST "/sms/in" req (sms/handle-incoming req))
   (POST "/sms/status" req (sms/handle-status req))
 
