@@ -1,5 +1,6 @@
 (ns mapthethings-server.data
   (:require [clojure.edn :as edn]
+            [clojure.string :as string]
             [clojure.data.codec.base64 :as b64]
             [clojure.tools.logging :as log]
             [clojure.java.io :as io]
@@ -131,26 +132,31 @@
 ;   }
 ; }
 
+(defn dev-eui-from-topic [topic]
+  "Extract DevEUI from topic with format: AppEUI/devices/DevEUI/up"
+  (get (string/split topic #"/") 2))
 
 (defn parse-json-string [json-string]
   (json/read-str json-string :key-fn keyword))
 
 (defn msg-from-ttn-v1
   "Takes a ttn v1 message and returns a simplified map containing just
-  :type, :lat, :lon, :rssi, :lsnr, :test-msg, and :error if there was a problem."
-  [ttn]
+  :type, :lat, :lon, :rssi, :lsnr, :test-msg, :dev_eui, and :error if there was a problem."
+  [ttn mqtt_topic]
   (log/debug ttn)
   (-> (decode-payload (:payload ttn))
+    (assoc :dev_eui (:dev_eui ttn))
     (assoc :type "ttn")
     (assoc :rssi (float (get-in ttn [:metadata 0 :rssi] 0)))
     (assoc :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0)))))
 
-(defn msg-from-ttn-v2 [ttn]
+(defn msg-from-ttn-v2
   "Takes a ttn v2 message and returns a simplified map containing just
   :type, :lat, :lon, :rssi, :lsnr, :test-msg, and :error if there was a problem."
-  [ttn]
+  [ttn mqtt-topic]
   (log/debug ttn)
   (-> (decode-payload (:payload_raw ttn))
+    (assoc :dev_eui (dev-eui-from-topic mqtt-topic))
     (assoc :type "ttn")
     (assoc :rssi (float (get-in ttn [:metadata :gateways 0 :rssi] 0)))
     (assoc :lsnr (float (get-in ttn [:metadata :gateways 0 :snr] 0)))))

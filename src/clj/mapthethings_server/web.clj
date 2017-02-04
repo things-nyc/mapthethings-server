@@ -54,10 +54,12 @@
 (defn store-raw-msg [msg-id msg]
   (grids/write-s3-as-json grids/raw-bucket msg-id (assoc msg :aws-id msg-id)))
 
-(defn handle-msg [msg raw]
+(defn handle-msg [msg raw msg-type]
   (cond
+    (:error msg) (log/error (str "Failed to handle " msg-type " message: " (:error msg)))
     (:sms msg) (sms/send-message msg)
-    (:mtt msg) (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw}))))
+    (:mtt msg) (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw}))
+    :else (log/error (str "Unknown " msg-type " message in handle-msg:" msg raw))))
 
 (defn wait-all
   "Waits for all channels and timeout in msecs. Returns true if succeeded."
@@ -139,26 +141,22 @@
 (defn ttn-handler [extract-data]
   (let [in (chan)]
     (go-loop []
-      (when-let [ttn-string (<! in)]
+      (when-let [[topic ttn-string] (<! in)]
         (try
           (log/debug "Received ttn-string" ttn-string)
           (let [json (data/parse-json-string ttn-string)
-                msg (extract-data json)
-                err (:error msg)]
-            (if err
-              (log/error (str "Failed to handle TTN message. " err))
-              (do
-                (log/debug "Converted to msg:" msg)
-                (handle-msg msg ttn-string))))
+                msg (extract-data json topic)]
+            (log/debug "Converted to msg:" msg)
+            (handle-msg msg ttn-string "TTN"))
           (catch Exception e
-            (log/error e "Failed to handle TTN message")))
+            (log/error e "Exception handling TTN message")))
         (recur)))
     in))
 
 (defn msg-sent-response [msg req-body]
   (try
       (log/debug "Received transmissions-packet" msg)
-      (handle-msg msg req-body)
+      (handle-msg msg req-body "API Transmission")
       {:status 201 ; HTTP "Created"
        :headers {"Content-Type" "application/json"}
        :body (json/write-str msg :escape-slash false)}
@@ -256,7 +254,7 @@
              (mh/subscribe (mh/connect mqtt-url id mqtt-opts) {"+/devices/+/up" 0} ; 0 QOS is fire-and-forget
                (fn [^String topic metadata ^bytes mqtt-msg]
                  (let [json-string-msg (String. mqtt-msg "UTF-8")]
-                   (go (>! work-channel json-string-msg))))
+                   (go (>! work-channel [topic json-string-msg]))))
                {:on-connection-lost resubscribe}))]
        (subscribe)
        (log/info "Subscribed to TTN at" mqtt-url))))

@@ -87,18 +87,20 @@
 (deftest ttn-msg-parse-test
   (testing "parse staging ttn map as a msg map"
     (let [ttn (parse-json-string test-ttn-string-v1)
-          msg (msg-from-ttn-v1 ttn)]
+          msg (msg-from-ttn-v1 ttn "appeui/devices/ignored")]
       (is (not (:payload msg)))
       (is (some? (:lat msg)))
       (is (some? (:lon msg)))
+      (is (= (:dev_eui msg) "00000000DEADBEEF"))
       (is (= (:rssi msg) (float -5)))
       (is (= (:lsnr msg) (float 5.3)))))
   (testing "parse v2 ttn map as a msg map"
     (let [ttn (parse-json-string test-ttn-string-v2)
-          msg (msg-from-ttn-v2 ttn)]
+          msg (msg-from-ttn-v2 ttn "appeui/devices/00000000DEADBEEF")]
       (is (not (:payload_raw msg)))
       (is (some? (:lat msg)))
       (is (some? (:lon msg)))
+      (is (= (:dev_eui msg) "00000000DEADBEEF"))
       (is (= (:rssi msg) (float -49)))
       (is (= (:lsnr msg) (float 8))))))
 
