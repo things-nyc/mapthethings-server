@@ -182,6 +182,7 @@
     (if (or (nil? lat) (nil? lon))
       [nil, (format "Invalid transmissions-packet lat/lon: %s/%s" slat slon)]
       [{
+        :mtt true ; MapTheThings data sample
         :type "attempt"
         :lat lat :lon lon
         :timestamp (or (:timestamp params) (current-timestamp))

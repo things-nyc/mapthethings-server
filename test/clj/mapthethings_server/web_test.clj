@@ -32,4 +32,4 @@
           json (json/write-str msg)
           response (app (request :post "/api/v0/transmissions" json))]
       (is (= 201 (:status response)))
-      (is (= "{\"type\":\"attempt\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msg_seq\":12345,\"dev_eui\":\"0123456789ABCDEF\",\"client-ip\":\"localhost\"}" (:body response))))))
+      (is (= "{\"mtt\":true,\"type\":\"attempt\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msg_seq\":12345,\"dev_eui\":\"0123456789ABCDEF\",\"client-ip\":\"localhost\"}" (:body response))))))
