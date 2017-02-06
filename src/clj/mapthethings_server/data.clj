@@ -174,6 +174,7 @@
 
 (defn parse-lat [s]
   (cond
+    (nil? s) s
     (number? s) s
     :else
       (if-let [north (fnext (re-matches #"([\.\d]+)[Nn]" s))]
@@ -184,6 +185,7 @@
 
 (defn parse-lon [s]
   (cond
+    (nil? s) s
     (number? s) s
     :else
       (if-let [east (fnext (re-matches #"([\.\d]+)[Ee]" s))]

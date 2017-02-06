@@ -1,5 +1,5 @@
 (ns mapthethings-server.web
-  (:require [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
+  (:require [compojure.core :as compojure :refer [defroutes GET PUT POST DELETE ANY]]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
             [clojure.edn :as edn]
@@ -8,9 +8,15 @@
             [ring.adapter.jetty :as jetty]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+            [ring.middleware.nested-params :refer [wrap-nested-params]]
+            [ring.middleware.session :refer [wrap-session]]
             [ring.middleware.defaults :refer :all]
-            #_[ring.middleware.stacktrace :as trace]
+            [ring.middleware.stacktrace :as trace]
+            [cemerick.friend :as friend]
+            (cemerick.friend [workflows :as workflows]
+                             [credentials :as creds])
             [environ.core :refer [env]]
+            [mapthethings-server.auth :as auth]
             [mapthethings-server.geo :as geo]
             [mapthethings-server.grids :as grids]
             [mapthethings-server.data :as data]
@@ -227,19 +233,35 @@
       (msg-sent-response msg (prn-str (:params req)))
       (error-response 400 error-msg))))
 
+(defn handle-verify-credentials [req]
+  ; (prn "handle-verify-credentials:" req)
+  (let [identity (get-in req [:session :cemerick.friend/identity :current])
+        auth (get-in req [:session :cemerick.friend/identity :authentications identity])
+        ret (select-keys auth [:username :name :profile-image])]
+    {:status 200
+     :headers {"Content-Type" "application/json"}
+     :body (json/write-str ret :escape-slash false)}))
+
+(defroutes api-v0-write-routes
+  (GET "/verify-credentials" req (handle-verify-credentials req))
+  (POST "/transmissions" req (handle-transmission-notice req)))
+
 (defroutes routes
   (GET "/" [] (splash))
   (GET "/api/v0/grids/:lat1/:lon1/:lat2/:lon2"
     [lat1 lon1 lat2 lon2]
     (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
-  (POST "/api/v0/transmissions" req (handle-transmission-notice req))
+
+  (compojure/wrap-routes
+    (compojure/context "/api/v0" [] api-v0-write-routes)
+    friend/wrap-authorize
+    #{:mapthethings-server.web/user})
 
   ; SMS
   (POST "/sms/in" req (sms/handle-incoming req))
   (POST "/sms/status" req (sms/handle-status req))
 
-  (ANY "*" []
-    (route/not-found (slurp (io/resource "404.html")))))
+  (route/not-found (slurp (io/resource "404.html"))))
 
 (defn wrap-services [f services]
   (fn [req]
@@ -261,12 +283,20 @@
         ;services (if ic services (assoc services :inbound-chan (msg-sent-handler)))
 
      (-> routes
-      ;(wrap-services services)
+       (friend/authenticate {:allow-anon? true
+                             :credential-fn auth/twitter-credential
+                             :workflows [auth/twitter-workflow]
+                             :login-uri "/api/v0/login"
+                             :unauthenticated-handler #(do (log/info "Unauthenticated: " %) {:status 401})
+                             :unauthorized-handler #(do (log/info "Unauthorized: " %) {:status 401})})
+       ;(wrap-services services)
        (wrap-defaults api-defaults)
+       (wrap-session)
+       (wrap-nested-params)
        (wrap-keyword-params)
        (wrap-params)
        (wrap-log-request)
-       #_(trace/wrap-stacktrace)))))
+       (trace/wrap-stacktrace)))))
 
 (defn connect-to-mqtt [mqtt-url username password parser]
   (let [work-channel (ttn-handler parser)
