@@ -1,5 +1,5 @@
 (ns mapthethings-server.web
-  (:require [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
+  (:require [compojure.core :as compojure :refer [defroutes GET PUT POST DELETE ANY]]
             [compojure.route :as route]
             [clojure.tools.logging :as log]
             [clojure.edn :as edn]
@@ -8,9 +8,15 @@
             [ring.adapter.jetty :as jetty]
             [ring.middleware.params :refer [wrap-params]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+            [ring.middleware.nested-params :refer [wrap-nested-params]]
+            [ring.middleware.session :refer [wrap-session]]
             [ring.middleware.defaults :refer :all]
-            #_[ring.middleware.stacktrace :as trace]
+            [ring.middleware.stacktrace :as trace]
+            [cemerick.friend :as friend]
+            (cemerick.friend [workflows :as workflows]
+                             [credentials :as creds])
             [environ.core :refer [env]]
+            [mapthethings-server.auth :as auth]
             [mapthethings-server.geo :as geo]
             [mapthethings-server.grids :as grids]
             [mapthethings-server.data :as data]
@@ -54,10 +60,42 @@
 (defn store-raw-msg [msg-id msg]
   (grids/write-s3-as-json grids/raw-bucket msg-id (assoc msg :aws-id msg-id)))
 
-(defn handle-msg [msg raw]
+(def handle-msg) ; Forward declaration
+
+(defn handle-completed-multiparts [_key parts-atom old new]
+  "Watches for changes to a collection of parts. If collection is complete, combine and remove it."
+  (let [completed (filter new (fn [[_ parts]] (:completed parts false)))
+        newly_completed (filter completed (fn [[dev_eui _]] (not (get-in old [dev_eui :completed] false))))]
+    (doseq [[dev_eui parts] newly_completed]
+      (let [msg (data/merge-multipart (vals parts))
+            msg (if (:error msg) msg (data/decode-byte-payload (:payload msg) msg))]
+        (swap! parts-atom dissoc dev_eui)
+        (handle-msg msg (str parts) "Multipart TTN")))))
+
+(def parts-atom
+  "Holds a Map of dev_eui -> Map of multipart parts"
+  (let [parts (atom {})]
+    (add-watch parts {} handle-completed-multiparts)
+    parts))
+
+(defn hold-multipart [msg]
+  (let [dev_eui (:dev_eui msg)
+        index (:index msg)
+        count (:count msg)]
+    (swap! parts-atom #(-> %
+                        (assoc-in [dev_eui index] msg)
+                        ((fn [pm]
+                          (if (= count (count (get pm dev_eui)))
+                            (assoc-in pm [dev_eui :completed] true)
+                            pm)))))))
+
+(defn handle-msg [msg raw msg-type]
   (cond
+    (:error msg) (log/error (str "Failed to handle " msg-type " message: " (:error msg)))
+    (:multipart msg) (hold-multipart msg)
     (:sms msg) (sms/send-message msg)
-    (:mtt msg) (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw}))))
+    (:mtt msg) (sqs/send-message @message-queue (prn-str {:msg msg :raw-msg raw}))
+    :else (log/error (str "Unknown " msg-type " message in handle-msg:" msg raw))))
 
 (defn wait-all
   "Waits for all channels and timeout in msecs. Returns true if succeeded."
@@ -139,26 +177,22 @@
 (defn ttn-handler [extract-data]
   (let [in (chan)]
     (go-loop []
-      (when-let [ttn-string (<! in)]
+      (when-let [[topic ttn-string] (<! in)]
         (try
           (log/debug "Received ttn-string" ttn-string)
           (let [json (data/parse-json-string ttn-string)
-                msg (extract-data json)
-                err (:error msg)]
-            (if err
-              (log/error (str "Failed to handle TTN message. " err))
-              (do
-                (log/debug "Converted to msg:" msg)
-                (handle-msg msg ttn-string))))
+                msg (extract-data json topic)]
+            (log/debug "Converted to msg:" msg)
+            (handle-msg msg ttn-string "TTN"))
           (catch Exception e
-            (log/error e "Failed to handle TTN message")))
+            (log/error e "Exception handling TTN message")))
         (recur)))
     in))
 
 (defn msg-sent-response [msg req-body]
   (try
       (log/debug "Received transmissions-packet" msg)
-      (handle-msg msg req-body)
+      (handle-msg msg req-body "API Transmission")
       {:status 201 ; HTTP "Created"
        :headers {"Content-Type" "application/json"}
        :body (json/write-str msg :escape-slash false)}
@@ -184,6 +218,7 @@
     (if (or (nil? lat) (nil? lon))
       [nil, (format "Invalid transmissions-packet lat/lon: %s/%s" slat slon)]
       [{
+        :mtt true ; MapTheThings data sample
         :type "attempt"
         :lat lat :lon lon
         :timestamp (or (:timestamp params) (current-timestamp))
@@ -198,18 +233,35 @@
       (msg-sent-response msg (prn-str (:params req)))
       (error-response 400 error-msg))))
 
+(defn handle-verify-credentials [req]
+  ; (prn "handle-verify-credentials:" req)
+  (let [identity (get-in req [:session :cemerick.friend/identity :current])
+        auth (get-in req [:session :cemerick.friend/identity :authentications identity])
+        ret (select-keys auth [:username :name :profile-image])]
+    {:status 200
+     :headers {"Content-Type" "application/json"}
+     :body (json/write-str ret :escape-slash false)}))
+
+(defroutes api-v0-write-routes
+  (GET "/verify-credentials" req (handle-verify-credentials req))
+  (POST "/transmissions" req (handle-transmission-notice req)))
+
 (defroutes routes
   (GET "/" [] (splash))
   (GET "/api/v0/grids/:lat1/:lon1/:lat2/:lon2"
     [lat1 lon1 lat2 lon2]
     (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
-  (POST "/api/v0/transmissions" req (handle-transmission-notice req))
 
+  (compojure/wrap-routes
+    (compojure/context "/api/v0" [] api-v0-write-routes)
+    friend/wrap-authorize
+    #{:mapthethings-server.web/user})
+
+  ; SMS
   (POST "/sms/in" req (sms/handle-incoming req))
   (POST "/sms/status" req (sms/handle-status req))
 
-  (ANY "*" []
-    (route/not-found (slurp (io/resource "404.html")))))
+  (route/not-found (slurp (io/resource "404.html"))))
 
 (defn wrap-services [f services]
   (fn [req]
@@ -231,12 +283,20 @@
         ;services (if ic services (assoc services :inbound-chan (msg-sent-handler)))
 
      (-> routes
-      ;(wrap-services services)
+       (friend/authenticate {:allow-anon? true
+                             :credential-fn auth/twitter-credential
+                             :workflows [auth/twitter-workflow]
+                             :login-uri "/api/v0/login"
+                             :unauthenticated-handler #(do (log/info "Unauthenticated: " %) {:status 401})
+                             :unauthorized-handler #(do (log/info "Unauthorized: " %) {:status 401})})
+       ;(wrap-services services)
        (wrap-defaults api-defaults)
+       (wrap-session)
+       (wrap-nested-params)
        (wrap-keyword-params)
        (wrap-params)
        (wrap-log-request)
-       #_(trace/wrap-stacktrace)))))
+       (trace/wrap-stacktrace)))))
 
 (defn connect-to-mqtt [mqtt-url username password parser]
   (let [work-channel (ttn-handler parser)
@@ -256,7 +316,7 @@
              (mh/subscribe (mh/connect mqtt-url id mqtt-opts) {"+/devices/+/up" 0} ; 0 QOS is fire-and-forget
                (fn [^String topic metadata ^bytes mqtt-msg]
                  (let [json-string-msg (String. mqtt-msg "UTF-8")]
-                   (go (>! work-channel json-string-msg))))
+                   (go (>! work-channel [topic json-string-msg]))))
                {:on-connection-lost resubscribe}))]
        (subscribe)
        (log/info "Subscribed to TTN at" mqtt-url))))

@@ -12,6 +12,8 @@
                  [org.clojure/core.cache "0.6.5"]
                  [ch.hsr/geohash "1.3.0"]
                  [com.twilio.sdk/twilio "7.4.0"]
+                 [com.cemerick/friend "0.2.3"]
+                 [org.twitter4j/twitter4j-core "4.0.6"]
                  [log4j/log4j "1.2.17" :exclusions [javax.mail/mail
                                                     javax.jms/jms
                                                     com.sun.jmdk/jmxtools
@@ -19,6 +21,7 @@
                  [compojure "1.5.2"]
                  [ring/ring-jetty-adapter "1.5.0"]
                  [ring/ring-defaults "0.2.1"]
+                 [ring/ring-devel "1.5.0"]
                  [environ "1.1.0"]
                  [org.clojure/data.codec "0.1.0"]
                  ;;ClojureScript

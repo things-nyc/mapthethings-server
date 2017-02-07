@@ -1,5 +1,6 @@
 (ns mapthethings-server.data
   (:require [clojure.edn :as edn]
+            [clojure.string :as string]
             [clojure.data.codec.base64 :as b64]
             [clojure.tools.logging :as log]
             [clojure.java.io :as io]
@@ -54,6 +55,16 @@
      :phone (str "+" phone)
      :sms true}))
 
+(defn decode-multipart-part [bytes]
+  ;04 XN b y t e s
+  (let [count (inc (bit-and 0x0F (aget bytes 1)))
+        index (bit-and 0x0F (bit-shift-right (aget bytes 1) 4))
+        payload (drop 2 (vec bytes))]
+    {:multipart true
+     :count count
+     :index index
+     :payload payload}))
+
 (defn decode-byte-payload [bytes encoded]
   ; Parse bytes as packed lat/lon or JSON or other formats
   (let [len (alength bytes)]
@@ -63,6 +74,7 @@
                       0x01 (decode-lat-lon-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
                       0x02 (assoc (decode-lat-lon-payload bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
                       0x03 (decode-sms-message bytes) ; 03 0A 16 46 55 55 55 50 M e s s a g e
+                      0x04 (decode-multipart-part bytes) ; 04 XN aa bb cc dd
                       0x81 (assoc (decode-lat-lon-payload bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
                       ; (decode-json-payload bytes)
                       {:error (str "Unable to parse packet: " bytes)})]
@@ -131,32 +143,38 @@
 ;   }
 ; }
 
+(defn dev-eui-from-topic [topic]
+  "Extract DevEUI from topic with format: AppEUI/devices/DevEUI/up"
+  (get (string/split topic #"/") 2))
 
 (defn parse-json-string [json-string]
   (json/read-str json-string :key-fn keyword))
 
 (defn msg-from-ttn-v1
   "Takes a ttn v1 message and returns a simplified map containing just
-  :type, :lat, :lon, :rssi, :lsnr, :test-msg, and :error if there was a problem."
-  [ttn]
+  :type, :lat, :lon, :rssi, :lsnr, :test-msg, :dev_eui, and :error if there was a problem."
+  [ttn mqtt_topic]
   (log/debug ttn)
   (-> (decode-payload (:payload ttn))
+    (assoc :dev_eui (:dev_eui ttn))
     (assoc :type "ttn")
     (assoc :rssi (float (get-in ttn [:metadata 0 :rssi] 0)))
     (assoc :lsnr (float (get-in ttn [:metadata 0 :lsnr] 0)))))
 
-(defn msg-from-ttn-v2 [ttn]
+(defn msg-from-ttn-v2
   "Takes a ttn v2 message and returns a simplified map containing just
   :type, :lat, :lon, :rssi, :lsnr, :test-msg, and :error if there was a problem."
-  [ttn]
+  [ttn mqtt-topic]
   (log/debug ttn)
   (-> (decode-payload (:payload_raw ttn))
+    (assoc :dev_eui (dev-eui-from-topic mqtt-topic))
     (assoc :type "ttn")
     (assoc :rssi (float (get-in ttn [:metadata :gateways 0 :rssi] 0)))
     (assoc :lsnr (float (get-in ttn [:metadata :gateways 0 :snr] 0)))))
 
 (defn parse-lat [s]
   (cond
+    (nil? s) s
     (number? s) s
     :else
       (if-let [north (fnext (re-matches #"([\.\d]+)[Nn]" s))]
@@ -167,6 +185,7 @@
 
 (defn parse-lon [s]
   (cond
+    (nil? s) s
     (number? s) s
     :else
       (if-let [east (fnext (re-matches #"([\.\d]+)[Ee]" s))]
@@ -174,3 +193,10 @@
         (if-let [west (fnext (re-matches #"([\.\d]+)[Ww]" s))]
           (- (edn/read-string west))
           (edn/read-string s)))))
+
+(defn merge-multipart [parts]
+  (let [parts (sort-by :index parts)
+        [err _] (reduce (fn [[err i] p] [(cond err err (not= i (:index p)) {:error (str "Missing part #" i)}) (inc i)]) [nil 0] parts)]
+    (if err err
+      {:payload (byte-array (reduce (fn [b p] (concat b (vec (:payload p)))) [] parts))
+       :count (count parts)})))

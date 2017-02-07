@@ -87,18 +87,20 @@
 (deftest ttn-msg-parse-test
   (testing "parse staging ttn map as a msg map"
     (let [ttn (parse-json-string test-ttn-string-v1)
-          msg (msg-from-ttn-v1 ttn)]
+          msg (msg-from-ttn-v1 ttn "appeui/devices/ignored")]
       (is (not (:payload msg)))
       (is (some? (:lat msg)))
       (is (some? (:lon msg)))
+      (is (= (:dev_eui msg) "00000000DEADBEEF"))
       (is (= (:rssi msg) (float -5)))
       (is (= (:lsnr msg) (float 5.3)))))
   (testing "parse v2 ttn map as a msg map"
     (let [ttn (parse-json-string test-ttn-string-v2)
-          msg (msg-from-ttn-v2 ttn)]
+          msg (msg-from-ttn-v2 ttn "appeui/devices/00000000DEADBEEF")]
       (is (not (:payload_raw msg)))
       (is (some? (:lat msg)))
       (is (some? (:lon msg)))
+      (is (= (:dev_eui msg) "00000000DEADBEEF"))
       (is (= (:rssi msg) (float -49)))
       (is (= (:lsnr msg) (float 8))))))
 
@@ -150,8 +152,35 @@
       (is (float= -73.9863 (:lon msg))))))
 
 (deftest parse-sms-packet
-  (testing "parse sms packet (format phonelen message)")
+  (testing "parse sms packet (format phonelen phone message)")
   (let [payload (byte-array (vec (concat [0x03 0x0B 0x16 0x46 0x18 0x84 0x56 0x70] (.getBytes "Message" "UTF-8"))))
         msg (decode-byte-payload payload "fake-encoded")]
     (is (= "+16461884567" (:phone msg)))
     (is (= "Message" (:message msg)))))
+
+(defn twos [v]
+  "Twos complement a sequence"
+  (map #(if (< % 128) % (- 0 1 (bit-xor % 0xFF))) v))
+
+(deftest parse-multipart-packet
+  (testing "parse multipart (format X/N bytes)")
+  (let [payload1 (byte-array (vec [0x04 0x01 0x03 0x0B 0x16 0x46 0x18 0x84 0x56 0x70]))
+        payload2 (byte-array (vec (concat [0x04 0x11] (.getBytes "Message" "UTF-8"))))
+        msg1 (decode-byte-payload payload1 "fake-encoded")
+        msg2 (decode-byte-payload payload2 "fake-encoded")
+        merged (merge-multipart [msg1 msg2])
+        msg (decode-byte-payload (:payload merged) "multi-part")
+        err (merge-multipart [msg2])]
+    (is (= 2 (:count msg1)))
+    (is (= 2 (:count msg2)))
+    (is (< (:index msg1) (:count msg1)))
+    (is (< (:index msg2) (:count msg2)))
+    (is (= (twos (vec (concat [0x03 0x0B 0x16 0x46 0x18 0x84 0x56 0x70] (.getBytes "Message" "UTF-8")))) (vec (:payload merged))))
+    (is (= "+16461884567" (:phone msg)))
+    (is (= "Message" (:message msg)))
+    (is (= "Missing part #0" (:error err)))))
+
+(deftest parse-dev-eui-from-topic
+  (testing "parsing dev-eui from topic string")
+  (let [dev-eui (dev-eui-from-topic "APPID/device/DEVID")]
+    (is (= "DEVID" dev-eui))))
