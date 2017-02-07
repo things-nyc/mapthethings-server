@@ -128,9 +128,14 @@
     }
     var failed = (attempts - successes)
     var pct_color = 'gray' // No attempt tracking data, so no packet loss pct
+    var pct_opacity = 0.0
     if (attempts>0) {
+      pct_opacity = 0.6
       var pct = successes / attempts // % of samples successful TTN messages?
-      if (pct>0.95) {
+      if (successes==0) {
+        pct_color = 'gray'
+      }
+      else if (pct>0.95) {
         pct_color = 'green'
       }
       else if (pct>0.75) {
@@ -151,7 +156,7 @@
       stroke: true,
       color: signal_color,
       fillColor: pct_color,
-      fillOpacity: 0.6
+      fillOpacity: pct_opacity
       })
 
     marker.bindPopup(
