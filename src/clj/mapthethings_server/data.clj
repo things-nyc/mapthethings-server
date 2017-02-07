@@ -45,7 +45,7 @@
     (apply str (map char bytes))))
 
 (defn decode-sms-message [bytes]
-  ;03 0A 16 46 55 55 55 50 M e s s a g e
+  ;03 0B 16 46 55 55 55 50 M e s s a g e
   (let [phone-digit-count (aget bytes 1)
         phone (extract-phone bytes 2 phone-digit-count)
         phone-len (/ (inc phone-digit-count) 2)
