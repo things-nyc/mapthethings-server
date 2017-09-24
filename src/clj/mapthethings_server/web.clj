@@ -322,10 +322,10 @@
        (log/info "Subscribed to TTN at" mqtt-url))))
 
 (defn connect-to-ttn []
-  (connect-to-mqtt
-    (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883")
-    (env :ttn-app-eui) (env :ttn-access-password)
-    data/msg-from-ttn-v1)
+  ; (connect-to-mqtt
+  ;   (env :ttn-mqtt-url "tcp://staging.thethingsnetwork.org:1883")
+  ;   (env :ttn-app-eui) (env :ttn-access-password)
+  ;   data/msg-from-ttn-v1)
   (connect-to-mqtt
     (env :ttnv2-mqtt-url "tcp://eu.thethings.network:1883")
     (env :ttnv2-app-id) (env :ttnv2-access-key)
