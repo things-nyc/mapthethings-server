@@ -6,6 +6,7 @@
             [clojure.string :refer [blank? join trim]]
             [clojure.tools.logging :as log]
             [ring.mock.request :refer :all]
+            [cemerick.friend :as friend]
             [mapthethings-server.grids :as grids]
             [mapthethings-server.web :refer :all]))
 
@@ -25,11 +26,35 @@
       (is (= 200 (:status response)))
       (is (= expectation (:body response))))))
 
+(defn fake-twitter-workflow [request]
+  ; (prn "fake-twitter-workflow" request)
+  (let [fake-cred-fn (get-in request [:cemerick.friend/auth-config :credential-fn])]
+    (if-let [user-record (fake-cred-fn {})]
+      (cemerick.friend.workflows/make-auth ; Which copies :username to :identity
+        user-record
+        {:cemerick.friend/workflow :twitter-workflow
+         :cemerick.friend/redirect-on-auth? false
+         :cemerick.friend/ensure-session true})
+      {:status 401
+       :headers {"Content-Type" "text/plain"
+                 "WWW-Authenticate" (format "FakeTwitterAuth realm=\"%s\"" "FAKE!")}})))
+
+(defn fake-credentials [keys]
+  {:identity "fake-id"
+    :username "fakename"
+    :name "fake name"
+    :profile-image "http://domain.com/image"
+    :roles #{:mapthethings-server.web/user}})
+
 (deftest msg-sent-test
   (testing "post transmissions endpoint"
-    (let [app (make-app)
-          msg {"lat" 40.0 "lon" -74.0 "alt" 10.0 "timestamp" "2016-05-25T15:30:26.713Z" "dev_eui" "0123456789ABCDEF" "msg_seq" 12345}
-          json (json/write-str msg)
-          response (app (request :post "/api/v0/transmissions" json))]
-      (is (= 201 (:status response)))
-      (is (= "{\"mtt\":true,\"type\":\"attempt\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msg_seq\":12345,\"dev_eui\":\"0123456789ABCDEF\",\"client-ip\":\"localhost\"}" (:body response))))))
+    (let [original-authenticate friend/authenticate]
+      (with-redefs [friend/authenticate (fn [routes config] (original-authenticate routes (assoc config
+                                                                                           :workflows [fake-twitter-workflow]
+                                                                                           :credential-fn fake-credentials)))]
+        (let [app (make-app)
+              msg {"lat" 40.0 "lon" -74.0 "alt" 10.0 "timestamp" "2016-05-25T15:30:26.713Z" "dev_eui" "0123456789ABCDEF" "msg_seq" 12345}
+              json (json/write-str msg)
+              response (app (request :post "/api/v0/transmissions" json))]
+          (is (= 201 (:status response)))
+          (is (= "{\"mtt\":true,\"type\":\"attempt\",\"lat\":40.0,\"lon\":-74.0,\"timestamp\":\"2016-05-25T15:30:26.713Z\",\"msg_seq\":12345,\"dev_eui\":\"0123456789ABCDEF\",\"client-ip\":\"localhost\"}" (:body response))))))))

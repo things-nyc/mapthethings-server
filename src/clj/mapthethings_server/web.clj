@@ -288,7 +288,7 @@
                              :workflows [auth/twitter-workflow]
                              :login-uri "/api/v0/login"
                              :unauthenticated-handler #(do (log/info "Unauthenticated: " %) {:status 401})
-                             :unauthorized-handler #(do (log/info "Unauthorized: " %) {:status 401})})
+                             :unauthorized-handler #(do (log/info "Unauthorized: " %) {:status 403})})
        ;(wrap-services services)
        (wrap-defaults api-defaults)
        (wrap-session)
