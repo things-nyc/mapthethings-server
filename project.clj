@@ -14,6 +14,7 @@
                  [com.twilio.sdk/twilio "7.4.0"]
                  [com.cemerick/friend "0.2.3"]
                  [org.twitter4j/twitter4j-core "4.0.6"]
+                 [org.slf4j/slf4j-log4j12 "1.7.1"]
                  [log4j/log4j "1.2.17" :exclusions [javax.mail/mail
                                                     javax.jms/jms
                                                     com.sun.jmdk/jmxtools
