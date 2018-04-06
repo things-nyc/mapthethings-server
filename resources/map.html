@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <title>Map The Things Network</title>
-  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
-  <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+  <script src="https://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
   <script src="https://code.jquery.com/jquery-2.2.4.min.js"
           integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
           crossorigin="anonymous"></script>
@@ -15,8 +15,8 @@
 <body onload="javascript:moveToUrlCoordinates();">
   <h1>Map The Things Network</h1>
   <h3>Creating a global coverage map for
-    <a href="http://thethingsnetwork.org">The Things Network</a></h3>
-  <h3>From <a href="http://thethings.nyc">The Things Network NYC</a></h3>
+    <a href="https://thethingsnetwork.org">The Things Network</a></h3>
+  <h3>From <a href="https://thethings.nyc">The Things Network NYC</a></h3>
   <div id="mapid"></div>
   <input type="button" onclick="javascript:recenter();" value="Show Local"/>
   <div id="boundsid">Bounds: </div>
@@ -55,8 +55,8 @@
   <h3>3. Map The Things - App &amp; Node</h3>
     <p>This option is not available because I have not yet written the app or built the node.</p>
     <p>Use the Map The Things
-    <a href="http://github.com/things-nyc/mapthethings-ios">iOS app</a> and
-    <a href="http://github.com/things-nyc/mapthethings-node">hardware node</a>
+    <a href="https://github.com/things-nyc/mapthethings-ios">iOS app</a> and
+    <a href="https://github.com/things-nyc/mapthethings-node">hardware node</a>
     to submit coverage samples.</p>
     <p>You start the node and start the app and then
       move around the coverage area, either as part of a specific data gathering
@@ -87,8 +87,8 @@
   var ignoreBoundsChange = false
 
   //L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
-  L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-      attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+  L.tileLayer('https://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+      attribution: 'Map data &copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://mapbox.com">Mapbox</a>',
       maxZoom: 19,
       id: 'mapbox.mapbox-streets-v4',
       //accessToken: 'pk.eyJ1IjoiZnJhbmtsZW9ucm9zZSIsImEiOiJjaW9sbm5pcWEwMXFwdjRqYjRmNHgxZ2s1In0.tk3zEksdrebcG4_KKUAL4Q'
