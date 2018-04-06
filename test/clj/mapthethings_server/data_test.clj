@@ -116,12 +116,45 @@
           value (extract-24bit-little-endian payload)]
       (is (= value -3447985)))))
 
+(deftest extract-24bit-network-order-test
+  (testing "extract 24 bit value"
+    (let [payload (byte-array [0x01 0x04 0x02])
+          value (extract-24bit-network-order payload)]
+      (is (= value 66562)))
+    (let [payload (byte-array [0x39 0xD7 0xE9])
+          value (extract-24bit-network-order payload)]
+      (is (= value 3790825)))
+    (let [payload (byte-array [0xCB 0x63 0x4F])
+          value (extract-24bit-network-order payload)]
+      (is (= value -3447985)))))
+
+(deftest extract-16bit-network-order-test
+  (testing "extract 24 bit value"
+    (let [payload (byte-array [0x02 0x04])
+          value (extract-16bit-network-order payload)]
+      (is (= value 516)))
+    (let [payload (byte-array [0xD7 0x39])
+          value (extract-16bit-network-order payload)]
+      (is (= value -10439)))
+    (let [payload (byte-array [0x63 0xCB])
+          value (extract-16bit-network-order payload)]
+      (is (= value 25547)))))
 
 (defn- float= [x y]
   ; http://gettingclojure.wikidot.com/cookbook:numbers
   (let [epsilon 0.00001
         scale (if (or (zero? x) (zero? y)) 1 (Math/abs x))]
     (<= (Math/abs (- x y)) (* scale epsilon))))
+
+(deftest decode-lat-lon-alt-hdop-bat-payload-test
+  (testing "parse 48 bit lat/lon plus 16bit each alt/hdop and battery byte payload"
+    (let [payload (byte-array [0x05 0x39 0xD7 0xE9 0xCB 0x63 0x4F 0x12 0x34 0x06 0x11 0x5A])
+          msg (decode-lat-lon-alt-hdop-bat-payload payload)]
+      (is (float= 40.6714 (:lat msg)))
+      (is (float= -73.9863 (:lon msg)))
+      (is (= 4660 (:alt msg)))
+      (is (float= 1.553 (:hdop msg)))
+      (is (= 90 (:bat msg))))))
 
 (deftest payload-lat-lon-test
   (testing "parse 48 bit lat/lon payload"

@@ -14,13 +14,31 @@
         lat-lon (if (contains? lat-lon :latitude) (assoc lat-lon :lat (:latitude lat-lon)) lat-lon)]
     lat-lon))
 
+(defn extract-16bit-network-order ; big-endian
   ([bytes]
+   (extract-16bit-network-order bytes 0))
+  ([bytes offset]
+   (let [mid (aget bytes offset)
+         low (aget bytes (inc offset))]
+      (bit-or
+        (bit-shift-left (int mid) 8) ; Sign extended, which is what we want
+        (bit-and 0xff (int low))))))
+
 (defn compose-bytes-to-int [high mid low]
   ; Thanks, https://blog.quiptiq.com/2012/07/01/creating-numeric-types-from-byte-arrays-in-clojure/
   (bit-or
     (bit-shift-left (int high) 16) ; Sign extended, which is what we want
     (bit-shift-left (bit-and 0xff (int mid)) 8) ; and to chop sign extension
     (bit-and 0xff (int low))))
+
+(defn extract-24bit-network-order ; big-endian
+  ([bytes]
+   (extract-24bit-network-order bytes 0))
+  ([bytes offset]
+   (let [high (aget bytes offset)
+         mid (aget bytes (inc offset))
+         low (aget bytes (+ offset 2))]
+     (compose-bytes-to-int high mid low))))
 
 (defn extract-24bit-little-endian ; Unfathomably, I chose non-network-byte order for formats 1&2.
   ([bytes]
@@ -39,6 +57,19 @@
           lon (extract-24bit-little-endian bytes 4)
           lon (/ lon 46603.0)]
       {:lat lat :lon lon :mtt true})))
+
+(defn decode-lat-lon-alt-hdop-bat-payload [bytes]
+  (if (not= 12 (alength bytes))
+    {:error (str "Unable to parse lat/lon/alt/hdop/bat from" (alength bytes) "bytes")}
+    (let [lat (extract-24bit-network-order bytes 1)
+          lat (/ lat 93206.0)
+          lon (extract-24bit-network-order bytes 4)
+          lon (/ lon 46603.0)
+          alt (extract-16bit-network-order bytes 7)
+          hdop (extract-16bit-network-order bytes 9)
+          hdop (/ hdop 1000.0)
+          bat (aget bytes 11)]
+      {:lat lat :lon lon :alt alt :hdop hdop :bat bat :mtt true})))
 
 (defn extract-phone [bytes offset digit-count]
   (let [nibbles (reduce (fn [nibs b] (concat nibs [(bit-and 0x0f (bit-shift-right b 4)) (bit-and 0x0f b)])) [] (drop offset (vec bytes)))
@@ -79,6 +110,7 @@
                       0x02 (assoc (decode-lat-lon-payload-little-endian bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
                       0x03 (decode-sms-message bytes) ; 03 0A 16 46 55 55 55 50 M e s s a g e
                       0x04 (decode-multipart-part bytes) ; 04 XN aa bb cc dd
+                      0x05 (decode-lat-lon-alt-hdop-bat-payload bytes) ; 05 112233 112233 1122 1122 77 (network byte order 24bit lat, lon, 16bit alt, hdop, 8bit battery)
                       0x81 (assoc (decode-lat-lon-payload-little-endian bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
                       ; (decode-json-payload bytes)
                       {:error (str "Unable to parse packet: " bytes)})]
