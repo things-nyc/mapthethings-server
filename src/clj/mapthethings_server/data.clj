@@ -14,25 +14,29 @@
         lat-lon (if (contains? lat-lon :latitude) (assoc lat-lon :lat (:latitude lat-lon)) lat-lon)]
     lat-lon))
 
-(defn extract-24bit
   ([bytes]
-   (extract-24bit bytes 0))
+(defn compose-bytes-to-int [high mid low]
+  ; Thanks, https://blog.quiptiq.com/2012/07/01/creating-numeric-types-from-byte-arrays-in-clojure/
+  (bit-or
+    (bit-shift-left (int high) 16) ; Sign extended, which is what we want
+    (bit-shift-left (bit-and 0xff (int mid)) 8) ; and to chop sign extension
+    (bit-and 0xff (int low))))
+
+(defn extract-24bit-little-endian ; Unfathomably, I chose non-network-byte order for formats 1&2.
+  ([bytes]
+   (extract-24bit-little-endian bytes 0))
   ([bytes offset]
    (let [low (aget bytes offset)
          mid (aget bytes (inc offset))
          high (aget bytes (+ offset 2))]
-          ; Thanks, https://blog.quiptiq.com/2012/07/01/creating-numeric-types-from-byte-arrays-in-clojure/
-     (bit-or
-       (bit-shift-left (int high) 16) ; Sign extended, which is what we want
-       (bit-shift-left (bit-and 0xff (int mid)) 8) ; and to chop sign extension
-       (bit-and 0xff (int low))))))
+     (compose-bytes-to-int high mid low))))
 
-(defn decode-lat-lon-payload [bytes]
+(defn decode-lat-lon-payload-little-endian [bytes]
   (if (not= 7 (alength bytes))
     {:error (str "Unable to parse lat/lon from" (alength bytes) "bytes")}
-    (let [lat (extract-24bit bytes 1)
+    (let [lat (extract-24bit-little-endian bytes 1)
           lat (/ lat 93206.0)
-          lon (extract-24bit bytes 4)
+          lon (extract-24bit-little-endian bytes 4)
           lon (/ lon 46603.0)]
       {:lat lat :lon lon :mtt true})))
 
@@ -71,11 +75,11 @@
     (if (= 0 len)
       {:error (str "Unable to parse lat/lon from no bytes")}
       (let [decoded (case (bit-and 0xFF (aget bytes 0))
-                      0x01 (decode-lat-lon-payload bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
-                      0x02 (assoc (decode-lat-lon-payload bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
+                      0x01 (decode-lat-lon-payload-little-endian bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
+                      0x02 (assoc (decode-lat-lon-payload-little-endian bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
                       0x03 (decode-sms-message bytes) ; 03 0A 16 46 55 55 55 50 M e s s a g e
                       0x04 (decode-multipart-part bytes) ; 04 XN aa bb cc dd
-                      0x81 (assoc (decode-lat-lon-payload bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
+                      0x81 (assoc (decode-lat-lon-payload-little-endian bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
                       ; (decode-json-payload bytes)
                       {:error (str "Unable to parse packet: " bytes)})]
         decoded))))

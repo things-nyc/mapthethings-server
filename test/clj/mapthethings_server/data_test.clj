@@ -104,16 +104,16 @@
       (is (= (:rssi msg) (float -49)))
       (is (= (:lsnr msg) (float 8))))))
 
-(deftest extract-24bit-test
+(deftest extract-24bit-little-endian-test
   (testing "extract 24 bit value"
     (let [payload (byte-array [0x02 0x04 0x01])
-          value (extract-24bit payload)]
+          value (extract-24bit-little-endian payload)]
       (is (= value 66562)))
     (let [payload (byte-array [0xE9 0xD7 0x39])
-          value (extract-24bit payload)]
+          value (extract-24bit-little-endian payload)]
       (is (= value 3790825)))
     (let [payload (byte-array [0x4F 0x63 0xCB])
-          value (extract-24bit payload)]
+          value (extract-24bit-little-endian payload)]
       (is (= value -3447985)))))
 
 
@@ -126,7 +126,7 @@
 (deftest payload-lat-lon-test
   (testing "parse 48 bit lat/lon payload"
     (let [payload (byte-array [0x01 0xE9 0xD7 0x39 0x4F 0x63 0xCB])
-          msg (decode-lat-lon-payload payload)]
+          msg (decode-lat-lon-payload-little-endian payload)]
       (is (float= 40.6714 (:lat msg)))
       (is (float= -73.9863 (:lon msg))))))
 
