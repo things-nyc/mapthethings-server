@@ -129,7 +129,7 @@
 ;   }",
 ;   "port":1,
 ;   "counter":4,
-;   "dev_eui":"00000000DEADBEEF",
+;   "dev_id":"00000000DEADBEEF",
 ;   "metadata":[
 ;     {
 ;       "frequency":865.4516,
@@ -156,7 +156,10 @@
 ; Format of V2 message from TTN
 ; {
 ;   "port": 1,
-;   "counter": 0,
+;   "counter": 123,
+;   "app_id":"myapp",
+;   "dev_id":"mydev001",
+;   "hardware_serial":"006158A2D06A7A4E",
 ;   "payload_raw": "AQ==",
 ;   "payload_fields": {
 ;     "led": true
@@ -203,7 +206,9 @@
   [ttn mqtt-topic]
   (log/debug ttn)
   (-> (decode-payload (:payload_raw ttn))
-    (assoc :dev_eui (dev-eui-from-topic mqtt-topic))
+    (assoc :dev_eui (:hardware_serial ttn))
+    (assoc :dev_id (or (:dev_id ttn) (dev-eui-from-topic mqtt-topic)))
+    (assoc :timestamp (get-in ttn [:metadata :time]))
     (assoc :type "ttn")
     (assoc :rssi (float (get-in ttn [:metadata :gateways 0 :rssi] 0)))
     (assoc :lsnr (float (get-in ttn [:metadata :gateways 0 :snr] 0)))))

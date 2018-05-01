@@ -45,6 +45,8 @@
   "{
     \"port\": 1,
     \"counter\": 0,
+    \"dev_id\":\"mydevid\",
+    \"hardware_serial\":\"00000000DEADBEEF\",
     \"payload_raw\": \"AfHXOVBjyw==\",
     \"payload_fields\": {
       \"led\": true
@@ -96,11 +98,12 @@
       (is (= (:lsnr msg) (float 5.3)))))
   (testing "parse v2 ttn map as a msg map"
     (let [ttn (parse-json-string test-ttn-string-v2)
-          msg (msg-from-ttn-v2 ttn "appeui/devices/00000000DEADBEEF")]
+          msg (msg-from-ttn-v2 ttn "appid/devices/devid")]
       (is (not (:payload_raw msg)))
       (is (some? (:lat msg)))
       (is (some? (:lon msg)))
       (is (= (:dev_eui msg) "00000000DEADBEEF"))
+      (is (= (:dev_id msg) "mydevid"))
       (is (= (:rssi msg) (float -49)))
       (is (= (:lsnr msg) (float 8))))))
 
