@@ -51,6 +51,7 @@
     <div id="leftpadding" style="height: 30px;"></div>
     <div id="legend" class="dropSheet">
       <input type="button" onclick="javascript:recenter();" value="Re-center Map"/>
+      <input id="recentBtn" type="button" onclick="javascript:recentOnly();" value="Updated Last 24 Hours Only"/>
     </div>
     <!-- <div id="legend" class="dropSheet">
       <table><tbody>
@@ -98,6 +99,15 @@
   function recenter() {
     navigator.geolocation.getCurrentPosition(gotPosition, errPosition);
   }
+  var justRecent = false
+  var recentDate = (new Date(Date.now() - 24 * 3600 * 1000)).toISOString() // "2018-05-01T17:40:56"
+  function recentOnly() {
+    justRecent = !justRecent
+    var text = justRecent ? "Show All Data" : "Updated Last 24 Hours Only"
+    $("#recentBtn").attr("value", text)
+    lastBounds = null
+    loadGrids(mymap.getBounds())
+  }
   //recenter() // Don't center map immediately, because browser pops up for permission
 
   var newyork = [40.7128, -74.0059]
@@ -133,6 +143,14 @@
 
   var makeMarker = function (cell) {
     // SNR (dBm): -20 (Red) -11 (Orange) -4 (Green)
+    if (justRecent) {
+      if (!cell.timestamp) {
+        return null
+      }
+      if (cell.timestamp < recentDate) {
+        return null
+      }
+    }
     var snr = cell.lsnr.avg
     var signal_color = 'red'
     if (cell.lsnr.cnt==0) {
@@ -251,8 +269,10 @@
         $.each(grids, function( gi, grid ) {
           $.each( grid.cells, function (key, cell) {
             var marker = makeMarker(cell)
-            marker.addTo(mymap)
-            polygons.push(marker)
+            if (marker!=null) {
+              marker.addTo(mymap)
+              polygons.push(marker)
+            }
           })
         })
         // Right before losing reference to markers, we remove them.
