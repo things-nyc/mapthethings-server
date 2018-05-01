@@ -13,63 +13,80 @@
           integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
           crossorigin="anonymous"></script>
   <style type="text/css">
-    #mapid { height: 500px; }
-  </style>
+    body {
+      padding: 0;
+      margin: 0;
+    }
+    html, body, #mapid {
+      height: 100%;
+    }
+    #leftcontainer {
+      position: absolute;
+      left: 20px;
+      bottom: 30px;
+      //max-width: 190px;
+      z-index: 500;
+    }
+    .dropSheet {
+      background-color/**/: #FFFFFF;
+      border-width: 2px;
+      border-style: solid;
+      border-color: #555555;
+      padding: 5px;
+    }
+    </style>
 </head>
 <body onload="javascript:moveToUrlCoordinates();">
-  <h1>Map The Things Network</h1>
-  <h3>Creating a global coverage map for
-    <a href="https://thethingsnetwork.org">The Things Network</a></h3>
-  <h3>From <a href="https://thethings.nyc">The Things Network NYC</a></h3>
+  <div id="leftcontainer">
+    <div id="menu" class="dropSheet">
+      <div style="font-size:120%; padding: 0px; font-weight: bold;">Map The Things Network</div>
+      <div style="margin-bottom:0; margin-top:0;">
+        <a href="https://thethingsnetwork.org">The Things Network Global</a><br/>
+        <a href="https://thethings.nyc">The Things Network New York</a><br/>
+        <a href="/about">About / Contributing</a><br/>
+        <a href="https://github.com/things-nyc/mapthethings-server">Code (Github)</a><br/>
+        <a href="http://twitter.com/frankleonrose">Contact</a><br>
+      </div>
+    </div>
+    <div id="leftpadding" style="height: 30px;"></div>
+    <div id="legend" class="dropSheet">
+      <input type="button" onclick="javascript:recenter();" value="Re-center Map"/>
+    </div>
+    <!-- <div id="legend" class="dropSheet">
+      <table><tbody>
+        <tr>
+          <th>Colour</th>
+          <th>RSSI</th>
+        </tr>
+        <tr>
+          <td bgcolor="#FF0000"></td>
+          <td>&gt; -100dBm</td>
+        </tr>
+        <tr>
+          <td bgcolor="#FF7F00"></td>
+          <td>-100 - -105</td>
+        </tr>
+        <tr>
+          <td bgcolor="#FFFF00"></td>
+          <td>-105 - -110</td>
+        </tr>
+        <tr>
+          <td bgcolor="#00FF00"></td>
+          <td>-110 - -115</td>
+        </tr>
+        <tr>
+          <td bgcolor="#00FFFF"></td>
+          <td>-115 - -120</td>
+        </tr>
+        <tr>
+          <td bgcolor="#0000FF"></td>
+          <td>&lt; -120dBm</td>
+        </tr>
+      </tbody></table>
+    </div> -->
+  </div>
+
   <div id="mapid"></div>
-  <input type="button" onclick="javascript:recenter();" value="Show Local"/>
-  <div id="boundsid">Bounds: </div>
-  <h2>Collecting Data</h2>
-  <p>We want your data in whatever way it is available.
-    We'll build out different ways to submit as we go.</p>
-  <h3>1. Upload Existing Data</h3>
-    <p>Many of you may already have recordings of successful transmissions
-      paired with GPS data.</p>
-    <p>Tweet us a link to your data:
-      <a href="https://twitter.com/intent/tweet?button_hashtag=MapTheThings&text=Here%20is%20my%20%40thethingsntwrk%20coverage%20data%3A%20URL" class="twitter-hashtag-button" data-related="thethingsnyc,thethingsntwrk">Tweet #MapTheThings</a>
-      <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-    </p>
-    <p>Or submit a pull request with your
-    data in a reasonable format (CSV, JSON, XML, YAML, EDN) in the Github
-    <a href="https://github.com/things-nyc/mapthethings-server/tree/master/data">project/data</a>
-    directory.</p>
-    <p>Make certain to include GPS coordinates, RSSI and SNR values
-    for successful TTN messages.</p>
-    <p>Let me know if your data includes attempted
-    transmissions that failed - we're interested in that data to show packet loss.</p>
-  <h3>2. GPS Nodes</h3>
-    <p>You are welcome to create your own nodes and use them to
-    transmit GPS coordinates to the Map The Things server.</p>
-    <ul>
-      <li>AppEUI:&nbsp;<code>70B3D57ED00001B0</code></li>
-      <li>DevEUI:&nbsp;Send me a DevEUI and I'll register it with the app and give you an app key</li>
-      <li>Data:&nbsp;Send lat/lon in 7 byte packets with the structure
-        <ul>
-          <li>Byte 00:&nbsp;Format indicator. <code>0x01</code></li>
-          <li>Byte 01-03:&nbsp;Latitude encoding. Little endian integer. <code>encoding = (latitude * 93206.0)</code></li>
-          <li>Byte 04-06:&nbsp;Longitude encoding. Little endian integer. <code>encoding = (longitude * 46603.0)</code></li>
-        </ul>
-      </li>
-    </ul>
-  <h3>3. Map The Things - App &amp; Node</h3>
-    <p>This option is not available because I have not yet written the app or built the node.</p>
-    <p>Use the Map The Things
-    <a href="https://github.com/things-nyc/mapthethings-ios">iOS app</a> and
-    <a href="https://github.com/things-nyc/mapthethings-node">hardware node</a>
-    to submit coverage samples.</p>
-    <p>You start the node and start the app and then
-      move around the coverage area, either as part of a specific data gathering
-      mission or just a normal day's wandering. The app will report all attempts
-      to send a message (via the API) as well successful transmissions via TTN.
-      The resulting data will enable us to distinguishing between
-      untested areas and those that have been tested and found wanting.</p>
-  <br/>
-  Copyright &copy; The Things Network New York 2016
   <script>
   function gotPosition(pos) {
     var crd = pos.coords;
@@ -90,9 +107,11 @@
   var lastSetUrlHash = "-"
   var ignoreBoundsChange = false
 
+  mymap.attributionControl.setPrefix("Data layers &copy; The Things Network New York");
+
   //L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution: 'Map data and tiles &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
       id: 'mapbox.mapbox-streets-v4',
       //accessToken: 'pk.eyJ1IjoiZnJhbmtsZW9ucm9zZSIsImEiOiJjaW9sbm5pcWEwMXFwdjRqYjRmNHgxZ2s1In0.tk3zEksdrebcG4_KKUAL4Q'

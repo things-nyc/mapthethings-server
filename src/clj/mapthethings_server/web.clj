@@ -38,10 +38,15 @@
     (fn []
       (time-format/unparse f (time/now)))))
 
-(defn splash []
+(defn page-map []
   {:status 200
    :headers {"Content-Type" "text/html"}
    :body (slurp (io/resource "map.html"))})
+
+(defn page-about []
+  {:status 200
+   :headers {"Content-Type" "text/html"}
+   :body (slurp (io/resource "about.html"))})
 
 (defn error-response [code msg]
  {:status code
@@ -247,7 +252,8 @@
   (POST "/transmissions" req (handle-transmission-notice req)))
 
 (defroutes routes
-  (GET "/" [] (splash))
+  (GET "/" [] (page-map))
+  (GET "/about" [] (page-about))
   (GET "/api/v0/grids/:lat1/:lon1/:lat2/:lon2"
     [lat1 lon1 lat2 lon2]
     (view-grids-response (edn/read-string lat1) (edn/read-string lon1) (edn/read-string lat2) (edn/read-string lon2)))
@@ -342,6 +348,7 @@
         app (make-app)
         sqs-channel (sqs-handler)]
     (log/info "Binding to:" (str port))
+    (log/debug "(Debug logging.)")
     (sms/init)
     (connect-to-ttn)
     (jetty/run-jetty app {:port port :join? false})))

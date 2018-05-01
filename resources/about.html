@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Map The Things Network - About</title>
+  <!-- <style type="text/css">
+    body {
+      padding: 0;
+      margin: 0;
+    }
+    html, body, #mapid {
+      height: 100%;
+    }
+    #leftcontainer {
+      position: absolute;
+      left: 20px;
+      bottom: 30px;
+      //max-width: 190px;
+      z-index: 500;
+    }
+    .dropSheet {
+      background-color/**/: #FFFFFF;
+      border-width: 2px;
+      border-style: solid;
+      border-color: #555555;
+      padding: 5px;
+    }
+  </style> -->
+</head>
+<body>
+  <h1>Map The Things Network</h1>
+  <p>The primary mapping application for The Things Network is <a href="https://ttnmapper.org">TTN Mapper</a>. JP has 3m+ data points already.</p>
+  <p>I built this app before knowing about TTN Mapper. It has some advantages:
+    <ul>
+      <li>Smaller amount of data downloaded per view</li>
+      <li>Current viewport in URL hash</li>
+      <li>Open source iOS app (<a href="https://github.com/the-things/mapthethings-ios">Map The Things iOS</a>)</li>
+    </ul>
+  </p>
+  <h2>Collecting Data</h2>
+  <p>We want your data in whatever way it is available.
+    We'll build out different ways to submit as we go.</p>
+  <h3>1. Upload Existing Data</h3>
+    <p>Many of you may already have recordings of successful transmissions
+      paired with GPS data.</p>
+    <p>Tweet us a link to your data:
+      <a href="https://twitter.com/intent/tweet?button_hashtag=MapTheThings&text=Here%20is%20my%20%40thethingsntwrk%20coverage%20data%3A%20URL" class="twitter-hashtag-button" data-related="thethingsnyc,thethingsntwrk">Tweet #MapTheThings</a>
+      <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+    </p>
+    <p>Or submit a pull request with your
+    data in a reasonable format (CSV, JSON, XML, YAML, EDN) in the Github
+    <a href="https://github.com/things-nyc/mapthethings-server/tree/master/data">project/data</a>
+    directory.</p>
+    <p>Make certain to include GPS coordinates, RSSI and SNR values
+    for successful TTN messages.</p>
+    <p>Let me know if your data includes attempted
+    transmissions that failed - we're interested in that data to show packet loss.</p>
+  <h3>2. GPS Nodes</h3>
+    <p>You are welcome to create your own nodes and use them to
+    transmit GPS coordinates to the Map The Things server.</p>
+    <ul>
+      <li>AppEUI:&nbsp;<code>70B3D57ED00001B0</code></li>
+      <li>DevEUI:&nbsp;Send me a DevEUI and I'll register it with the app and give you an app key</li>
+      <li>Data:&nbsp;Send lat/lon in 7 byte packets with the structure
+        <ul>
+          <li>Byte 00:&nbsp;Format indicator. <code>0x01</code></li>
+          <li>Byte 01-03:&nbsp;Latitude encoding. Little endian integer. <code>encoding = (latitude * 93206.0)</code></li>
+          <li>Byte 04-06:&nbsp;Longitude encoding. Little endian integer. <code>encoding = (longitude * 46603.0)</code></li>
+        </ul>
+      </li>
+    </ul>
+  <h3>3. Map The Things - App &amp; Node</h3>
+    <p>Use the Map The Things
+    <a href="https://github.com/things-nyc/mapthethings-ios">iOS app</a> and
+    <a href="https://github.com/things-nyc/mapthethings-arduino">hardware node</a>
+    to submit coverage samples.</p>
+    <p>You start the node and start the app and then
+      move around the coverage area, either as part of a specific data gathering
+      mission or just a normal day's wandering. The app will report all attempts
+      to send a message (via the API) as well successful transmissions via TTN.
+      The resulting data will enable us to distinguishing between
+      untested areas and those that have been tested and found wanting.</p>
+  <br/>
+  Copyright &copy; The Things Network New York 2018
+
+  <!-- Google Analytics -->
+  <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-78066741-2', 'auto');
+    ga('send', 'pageview');
+  </script>
+  <!-- End Google Analytics -->
+</body>
+</html>
