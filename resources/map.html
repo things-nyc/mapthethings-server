@@ -101,7 +101,7 @@
   //recenter() // Don't center map immediately, because browser pops up for permission
 
   var newyork = [40.7128, -74.0059]
-  var world = [20, 0]
+  var world = [12, -27]
   var mymap = L.map('mapid')
   var lastBounds = ""
   var lastSetUrlHash = "-"
@@ -289,7 +289,7 @@
         setMapView([lat, lng], zoom)
       }
       else {
-        setMapView(world, 2);
+        setMapView(world, 3);
       }
     }
     loadGrids(mymap.getBounds())
