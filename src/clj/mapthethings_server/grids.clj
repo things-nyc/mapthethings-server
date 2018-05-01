@@ -57,15 +57,25 @@
 (defn geohash-to-string [g]
   (format "%s%X" (get bit-prefix (.significantBits g)) (.ord g)))
 
-(defn constrain [min max v]
+(defn- normalize-cycle
+  "Steps value to lie within a single cycle"
+  [min max v]
   (let [step (- max min)]
     (cond
-      (< v min) (constrain min max (+ v step))
-      (> v max) (constrain min max (- v step))
+      (< v min) (normalize-cycle min max (+ v step))
+      (> v max) (normalize-cycle min max (- v step))
       :else v)))
 
-(def normalize-lat (partial constrain -90.0 90.0))
-(def normalize-lon (partial constrain -180.0 180.0))
+(def normalize-lat (partial normalize-cycle -90.0 90.0))
+(def normalize-lon (partial normalize-cycle -180.0 180.0))
+
+(defn- limit
+  "Steps value to lie within a single cycle"
+  [ll ul v]
+  (min ul (max ll v)))
+
+(def limit-lat (partial limit -90.0 90.0))
+(def limit-lon (partial limit -180.0 180.0))
 
 (defn grid-hash-raw [lat lon level]
     (GeoHash/withBitPrecision (normalize-lat lat) (normalize-lon lon) (+ level level)))
@@ -288,29 +298,33 @@
    (view-grids lat1 lon1 lat2 lon2 6))
 
   ([lat1 lon1 lat2 lon2 max-grid-count]
-   (loop [level 20]
-     (if (zero? level)
-       [(grid-hash lat1 lon1 level)]
-       (let [geo1 (grid-hash-raw lat1 lon1 level)
-             box1 (.getBoundingBox geo1)
-             geo2 (grid-hash-raw lat2 lon2 level)
-             box2 (.getBoundingBox geo2)
-             ul1 (.getUpperLeft box1)
-             lr1 (.getLowerRight box1)
+   (let [lat1 (limit-lat lat1)
+         lon1 (limit-lon lon1)
+         lat2 (limit-lat lat2)
+         lon2 (limit-lon lon2)]
+    (loop [level 20]
+      (if (zero? level)
+        [(grid-hash lat1 lon1 level)]
+        (let [geo1 (grid-hash-raw lat1 lon1 level)
+              box1 (.getBoundingBox geo1)
+              geo2 (grid-hash-raw lat2 lon2 level)
+              box2 (.getBoundingBox geo2)
+              ul1 (.getUpperLeft box1)
+              lr1 (.getLowerRight box1)
 
-             ulat (.getLatitude ul1)
-             llat (.getLatitude (.getLowerRight box2))
-             box-height (Math/abs (- ulat (.getLatitude lr1)))
-             lat-span (- ulat llat (if (< lat1 lat2) -180 0))
-             y-count (round-up-99 (/ lat-span box-height))
+              ulat (.getLatitude ul1)
+              llat (.getLatitude (.getLowerRight box2))
+              box-height (Math/abs (- ulat (.getLatitude lr1)))
+              lat-span (- ulat llat (if (< lat1 lat2) -180 0))
+              y-count (round-up-99 (/ lat-span box-height))
 
-             llon (.getLongitude ul1)
-             rlon (.getLongitude (.getLowerRight box2))
-             lon-span (- rlon llon (if (> lon1 lon2) -360 0))
-             box-width (Math/abs (- (.getLongitude lr1) llon))
-             x-count (round-up-99 (/ lon-span box-width))]
+              llon (.getLongitude ul1)
+              rlon (.getLongitude (.getLowerRight box2))
+              lon-span (- rlon llon (if (> lon1 lon2) -360 0))
+              box-width (Math/abs (- (.getLongitude lr1) llon))
+              x-count (round-up-99 (/ lon-span box-width))]
 
-         ;(log/debug "x-count" x-count ", y-count" y-count ", lat-span" lat-span ", lon-span" lon-span)
-         (if (and (<= x-count max-grid-count) (<= y-count max-grid-count))
-           (generate-view-grids lat1 lon1 x-count y-count level)
-           (recur (dec level))))))))
+          ;(log/debug "x-count" x-count ", y-count" y-count ", lat-span" lat-span ", lon-span" lon-span)
+          (if (and (<= x-count max-grid-count) (<= y-count max-grid-count))
+            (generate-view-grids lat1 lon1 x-count y-count level)
+            (recur (dec level)))))))))

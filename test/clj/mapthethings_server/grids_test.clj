@@ -218,3 +218,21 @@
           hashes (view-grids lat1 lon1 lat2 lon2)]
       (is (some? hashes))
       (is (= hashes ["S3AAAC" "S3AAA9" "S3AAA8" "S2FFFD" "S2FFFC" "S2FFF9" "S3AAAE" "S3AAAB" "S3AAAA" "S2FFFF" "S2FFFE" "S2FFFB" "S10004" "S10001" "S10000" "S5555" "S5554" "S5551" "S10006" "S10003" "S10002" "S5557" "S5556" "S5553"])))))
+
+(deftest geohash-wide-view-test
+  (testing "Wider than the world view works"
+    (let [lat1 75.9309
+          lon1 -248.5547
+          lat2 -61.6064
+          lon2 248.9063
+          hashes (view-grids lat1 lon1 lat2 lon2)]
+      (is (some? hashes))
+      (is (= hashes ["E5" "E4" "E1" "E0" "E7" "E6" "E3" "E2" "ED" "EC" "E9" "E8" "EF" "EE" "EB" "EA"]))))
+  (testing "Smaller wide view works"
+    (let [lat1 68.9742
+          lon1 -136.4062
+          lat2 -2.8114
+          lon2 112.3242
+          hashes (view-grids lat1 lon1 lat2 lon2)]
+      (is (some? hashes))
+      (is (= hashes ["E5" "E4" "E1" "E7" "E6" "E3" "ED" "EC" "E9" "EF" "EE" "EB"])))))
