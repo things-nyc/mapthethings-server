@@ -106,12 +106,12 @@
     (if (= 0 len)
       {:error (str "Unable to parse lat/lon from no bytes")}
       (let [decoded (case (bit-and 0xFF (aget bytes 0))
-                      0x01 (decode-lat-lon-payload-little-endian bytes) ; 01 112233 112233 (little endian 24bit lat, lon)
-                      0x02 (assoc (decode-lat-lon-payload-little-endian bytes) :tracked true) ; 02 112233 112233 (little endian 24bit lat, lon)
-                      0x03 (decode-sms-message bytes) ; 03 0A 16 46 55 55 55 50 M e s s a g e
+                      0x01 (decode-lat-lon-payload-little-endian bytes) ; 01 012345 012345 (little endian 24bit lat, lon)
+                      0x02 (assoc (decode-lat-lon-payload-little-endian bytes) :tracked true) ; 02 012345 012345 (little endian 24bit lat, lon)
+                      0x03 (decode-sms-message bytes) ; 03 0A 16 46 55 55 55 5F M e s s a g e (phlen ph on en um be r- M e s s a g e)
                       0x04 (decode-multipart-part bytes) ; 04 XN aa bb cc dd
-                      0x05 (decode-lat-lon-alt-hdop-bat-payload bytes) ; 05 112233 112233 1122 1122 77 (network byte order 24bit lat, lon, 16bit alt, hdop, 8bit battery)
-                      0x81 (assoc (decode-lat-lon-payload-little-endian bytes) :test-msg true) ; 81 112233 112233 (little endian 24bit lat, lon)
+                      0x05 (decode-lat-lon-alt-hdop-bat-payload bytes) ; 05 543210 543210 1122 1122 77 (network byte order 24bit lat, lon, 16bit alt, hdop, 8bit battery)
+                      0x81 (assoc (decode-lat-lon-payload-little-endian bytes) :test-msg true) ; 81 012345 012345 (little endian 24bit lat, lon)
                       ; (decode-json-payload bytes)
                       {:error (str "Unable to parse packet: " bytes)})]
         decoded))))

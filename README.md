@@ -42,7 +42,7 @@ global coverage map for The Things Network (TTN).
 This is a current work in progress as of Summer 2016. We welcome pull requests.
 
 ### TODO
-- Support "lat,lng" TTN messages
+- Support "lat,lng" parsed TTN messages
 - Support partitioning grid update work
 - Record histogram of number of gateways receiving a message: {1 40 2 3 5 1}
 - Use mock S3 and SQS for testing
