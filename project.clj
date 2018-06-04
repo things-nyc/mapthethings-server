@@ -10,6 +10,7 @@
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/core.cache "0.6.5"]
+                 [com.stuartsierra/component "0.3.2"]
                  [ch.hsr/geohash "1.3.0"]
                  [com.twilio.sdk/twilio "7.4.0"]
                  [com.cemerick/friend "0.2.3"]
@@ -53,6 +54,7 @@
   :uberjar-name "mapthethings-server-standalone.jar"
   :main mapthethings-server.web
   :aot [mapthethings-server.web]
+  :aliases {"batch" ["run" "-m" "mapthethings-server.batch"]}
   :cljsbuild {
               :builds [ { :id "mapthethings-server"
                          :source-paths ["src/cljs"]

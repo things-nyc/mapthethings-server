@@ -9,11 +9,11 @@
             [clojure.core.cache :as cache]
             [clojure.core.async
              :as async
-             :refer [>! <! >!! <!! go chan buffer close! thread
+             :refer [>! <! >!! <!! go chan buffer close! thread put!
                      alts! alts!! timeout]])
   (:import [ch.hsr.geohash GeoHash]
            [java.lang Math]
-           [com.amazonaws.auth BasicAWSCredentials]
+           #_[com.amazonaws.auth BasicAWSCredentials]
            [com.amazonaws.services.s3.model AmazonS3Exception]
            [com.amazonaws.regions Regions]))
 
@@ -158,16 +158,35 @@
 (def GridCache (ref (cache/->LUCache {} {} (or (edn/read-string (env :grid-cache-size)) 2000))))
 #_(cache/evict C :b)
 
-(defn json->grid [json-grid]
-  (json/read-str json-grid
-    :key-fn keyword))
-
 (defn make-grid [hash]
   {
     :level (level-from-hash hash)
     :hash hash
     :write-cnt 1
     :cells {}})
+
+(defn read-s3-as-json-sync
+  "Synchronously fetch a JSON object from S3. Returns object or map with {:error} key"
+  [bucket-name key]
+  (try
+    (let [;_ (println "Getting object" bucket-name " Key:" key)
+          ;_ (println " Object chan:" obj-chan)
+          obj (slurp (:input-stream
+                      (s3/get-object
+                        :bucket-name bucket-name
+                        :key key)))]
+          ;_ (println obj)]
+      (json/read-str obj :key-fn keyword))
+    (catch AmazonS3Exception e
+      (log/error e "Error fetching object")
+      {:error "Failed to load object" :key key :exception e})))
+
+(defn read-s3-as-json
+  "Fetch a JSON object from S3. Takes a channel on which it places object"
+  [bucket-name key obj-chan]
+  (go ; Open async block here because we want s3/get-object to run async
+    (>! obj-chan (read-s3-as-json-sync bucket-name key))
+    (close! obj-chan)))
 
 (defn fetch-grid-s3
   "Fetch a grid from S3.
@@ -179,7 +198,7 @@
                         (s3/get-object
                           :bucket-name grid-bucket
                           :key (s3-key hash))))
-            grid (json->grid obj)]
+            grid (json/read-str obj :key-fn keyword)]
         (update grid :write-cnt incnil)) ; We loaded it because we're going to write it
      (catch AmazonS3Exception e
        (if (not= 404 (.getStatusCode e))
