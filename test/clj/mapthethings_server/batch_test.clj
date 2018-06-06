@@ -5,7 +5,7 @@
             [mapthethings-server.batch :refer :all]
             [clojure.core.async
              :as async
-             :refer [>! <! >!! <!! go go-loop chan buffer close! thread onto-chan
+             :refer [>! <! >!! <!! go go-loop chan buffer close! thread onto-chan put!
                      alts! alts!! timeout]]))
 
 (defrecord MockS3
@@ -23,10 +23,12 @@
         (log/warn t "Error when stopping S3"))))
 
   S3protocol
+  (read-json [this bucket-name key obj-chan]
+    (put! obj-chan {:error "Unimplemented"} (fn [_] (close! obj-chan))))
   (write-json [this bucket-name key obj]
     (go {:error "Unimplemented"}))
   (get-json-bucket [this bucket-name list-chan]
-    (go {:error "Unimplemented"})))
+    (put! list-chan {:error "Unimplemented"} (fn [_] (close! list-chan)))))
 
 
 (deftest parse-dev-eui-from-topic

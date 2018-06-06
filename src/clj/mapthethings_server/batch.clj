@@ -95,3 +95,42 @@
 ;; For interactive development:
 ;; (.stop server)
 ;; (def server (-main))
+
+(comment
+  (use 'mapthethings-server.batch :reload)
+  (def list-chan (chan))
+  (def system (com.stuartsierra.component/start (mapthethings-server.batch/make-system {})))
+  (get-json-bucket (:s3 system) "com.futurose.thingsburg.messages.test" list-chan))
+
+
+(comment
+  {:msg {:msgid nil, :rssi -115.0, :appkey nil, :type "import", :lsnr 0.2, :lon 6.897752, :lat 52.217396,
+          :timestamp "2016-03-05T15:46:48.000Z", :api-key "org.ttnmapper-20160531"},
+    :raw-msg {:freq "868.100", :rssi "-115.00", :alt "102.0", :accuracy "7.00", :time "2016-03-05 15:46:48",
+              :snr "0.20", :nodeaddr "03FFEEBB", :datarate "SF7BW125", :id "65565", :lon "6.897752", :gwaddr "AA555A000806053F",
+              :lat "52.217396", :provider "gps"}, :aws-id "0002c5a0-c9a4-4de9-b9cd-3fcdcc721d76"}
+  {:msg {:type "ping", :lat 51.9605040550232, :lon 5.78863620758057, :timestamp "2016-04-17 15:40:08",
+          :rssi -119, :lsnr -9, :msgid nil, :appkey nil},
+    :raw-msg nil, :aws-id "0002f284-5b27-40b3-a32f-f6896cd26649"}
+  {:msg {:msgid nil, :rssi -120, :appkey nil, :type "import", :lsnr -10.2, :lon 5.66405296325684, :lat 52.0731782913208,
+          :timestamp "2016-04-17 16:29:34", :api-key "net.ltcm.ttn-utrecht20160602"},
+    :raw-msg nil, :aws-id "0003394f-db5e-47a5-9133-309584db9488"}
+  {:msg {:msgid nil, :rssi -117, :appkey nil, :type "import", :lsnr -2.5, :lon 5.14771699905396, :lat 52.1662402153015,
+          :timestamp "2016-03-30 13:47:26", :api-key "net.ltcm.ttn-utrecht20160602"},
+    :raw-msg nil, :aws-id "0003549e-c774-46db-a837-ee7fafd46551"}
+  {:msg {:msgid nil, :rssi -114.0, :appkey nil, :type "import", :lsnr 5.8, :lon 5.478725, :lat 51.492374,
+          :timestamp "2016-03-17T20:09:49.000Z", :api-key "org.ttnmapper-20160531"},
+    :raw-msg {:freq "868.100", :rssi "-114.00", :alt "67.0", :accuracy "3.00", :time "2016-03-17 20:09:49", :snr "5.80",
+              :nodeaddr "02010507", :datarate "SF7BW125", :id "71855", :lon "5.478725", :gwaddr "FFFEB827EB6EBDC4",
+              :lat "51.492374", :provider "gps"}, :aws-id "000536cc-b3e3-4c68-8c7e-99271cda1c1f"}
+  {:msg {:msgid nil, :rssi -84.0, :appkey nil, :type "import", :lsnr 7.2, :lon 6.8572, :lat 52.2411,
+          :timestamp "2016-02-01T09:33:52.000Z", :api-key "org.ttnmapper-20160531"},
+    :raw-msg {:freq "868.500", :rssi "-84.00", :alt "NULL", :accuracy "NULL", :time "2016-02-01 09:33:52", :snr "7.20",
+              :nodeaddr "02016304", :datarate "SF7BW125", :id "5421", :lon "6.857200", :gwaddr "008000000000AA78",
+              :lat "52.241100", :provider "NULL"}, :aws-id "0007958b-f13d-4985-a3b4-cfbcd3bc79ac"})
+
+
+; 20180603 Today I learned
+; - onto-chan returns a channel that one needs to sit on to wait until the operation is finished.
+; - #(close! c) cannot be used as completion function in put! because arity is wrong.
+; -
