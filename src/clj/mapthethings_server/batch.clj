@@ -16,7 +16,7 @@
             [clj-time.format :as time-format]
             [clojure.core.async
              :as async
-             :refer [>! <! >!! <!! go go-loop chan buffer close! thread onto-chan
+             :refer [>! <! >!! <!! go go-loop chan buffer close! thread onto-chan put!
                      alts! alts!! timeout pipeline-async]])
   (:import [ch.hsr.geohash GeoHash])
   (:gen-class))
@@ -70,20 +70,74 @@
       ; (pipeline-async 1 objs-chan #(go (>! %2 %1) (close! %2)) list-chan))))
       (pipeline-async 1 objs-chan (partial grids/read-s3-as-json bucket-name) (async/map :key [list-chan])))))
 
+(comment
+  (def key-schema
+    [{:attribute-name "id"   :key-type "HASH"}
+     {:attribute-name "date" :key-type "RANGE"}])
+  (def attribute-schema
+    [ {:attribute-name "id"      :attribute-type "S"}
+      {:attribute-name "date"    :attribute-type "N"}])
+  (create-table (:ddb system) "TestTable" key-schema attribute-schema 1 1)
+  (async/take! (create-table (:ddb system) "TestTable" key-schema attribute-schema 1 1)) prn
+
+  (ddb/create-table :table-name "TestTable"
+              :key-schema
+                [{:attribute-name "id"   :key-type "HASH"}
+                 {:attribute-name "date" :key-type "RANGE"}]
+              :attribute-definitions
+                [{:attribute-name "id"      :attribute-type "S"}
+                 {:attribute-name "date"    :attribute-type "N"}
+                 {:attribute-name "column1" :attribute-type "S"}
+                 {:attribute-name "column2" :attribute-type "S"}]
+              :provisioned-throughput
+                {:read-capacity-units 1
+                 :write-capacity-units 1}))
+
 (defprotocol DDBprotocol
-  (write-object [this bucket-name key obj]))
+  (create-table
+    [this table-name key-schema attribute-schema read-units write-units]
+    "Creates a table. Returns a channel that contains an error or is closed when the table becomes active.")
+  (update-provisioning
+    [this table-name read-units write-units]
+    "Updates the provisioning of a table. Returns a channel that contains an error or is closed when the table update succeeds.")
+  (write-object [this table-name key obj]))
 
 (defrecord DDB
   []
 
   DDBprotocol
-  (write-object [this bucket-name key obj]
-    this))
+  (create-table [this table-name key-schema attribute-schema read-units write-units]
+    (go
+      (try
+        (let
+          [tbl
+            (ddb/create-table
+              :table-name table-name
+              :key-schema key-schema
+              :attribute-definitions attribute-schema
+              :provisioned-throughput
+                { :read-capacity-units read-units
+                  :write-capacity-units write-units})]
+          (log/debug "create-table" tbl)
+          (loop [tbl (:table-description tbl)]
+            (when (not= (:table-status tbl) "ACTIVE")
+              ; (prn tbl)
+              (<! (async/timeout 1000))
+              (recur (:table (ddb/describe-table table-name))))))
+            ; Otherwise nil result of (go) block - just closes channel
+        (catch Exception e
+          (let [error-msg (format "Failed create table [%s]." table-name)]
+            (log/error e error-msg)
+            {:error error-msg :exception e})))))
+
+  (update-provisioning [this table-name read-units write-units])
+  (write-object [this table-name key obj]))
 
 (defn make-system
   [config]
   (component/system-map
    :s3 (->S3)
+   :ddb (->DDB)))
 
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 5000))]
