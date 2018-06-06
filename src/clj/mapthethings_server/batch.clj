@@ -56,18 +56,7 @@
         (async/close! list-chan)))))
 
 (defrecord S3
-  [msg]
-
-  component/Lifecycle
-  (start [this]
-    (log/info "S3 starting:" (:msg this))
-    this)
-  (stop [this]
-    (try
-      (log/info "S3 stopping:" (:msg this))
-      (assoc this :msg nil)
-      (catch Throwable t
-        (log/warn t "Error when stopping S3"))))
+  []
 
   S3protocol
   (read-json [this bucket-name key obj-chan]
@@ -85,18 +74,7 @@
   (write-object [this bucket-name key obj]))
 
 (defrecord DDB
-  [msg]
-
-  component/Lifecycle
-  (start [this]
-    (log/info "S3 starting:" (:msg this))
-    this)
-  (stop [this]
-    (try
-      (log/info "S3 stopping:" (:msg this))
-      (assoc this :msg nil)
-      (catch Throwable t
-        (log/warn t "Error when stopping S3"))))
+  []
 
   DDBprotocol
   (write-object [this bucket-name key obj]
@@ -105,7 +83,7 @@
 (defn make-system
   [config]
   (component/system-map
-   :s3 (map->S3 {:msg "Test S3"})))
+   :s3 (->S3)
 
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 5000))]
