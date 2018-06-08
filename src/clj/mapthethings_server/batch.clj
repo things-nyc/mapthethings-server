@@ -133,6 +133,30 @@
   (update-provisioning [this table-name read-units write-units])
   (write-object [this table-name key obj]))
 
+(defn partition-by-onto-chan
+  "Partitions a sequence of values into sub-sequences whose elements all share the same result of application of (key-fn)."
+  [key-fn]
+  (fn [xf]
+    (let [last-key (volatile! nil)
+          values-chan (volatile! nil)]
+      (fn
+        ([] (xf))
+        ([result]
+         (xf result))
+        ([result el]
+         (let [key-val (key-fn el)
+               [result out-chan]
+               (let [ch @values-chan] ; Deref volatile value just once here
+                (if (and ch (= @last-key key-val))
+                  [result ch] ; Channel for this key value has already been forwarded
+                  (let [new-ch (chan)]
+                    (when ch (async/close! ch))
+                    (vreset! values-chan new-ch)
+                    (vreset! last-key key-val)
+                    [(xf result new-ch) new-ch])))]
+          (async/put! out-chan el)
+          result))))))
+
 (defn make-system
   [config]
   (component/system-map

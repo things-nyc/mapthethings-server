@@ -31,7 +31,30 @@
     (put! list-chan {:error "Unimplemented"} (fn [_] (close! list-chan)))))
 
 
-(deftest parse-dev-eui-from-topic
-  (testing "parsing dev-eui from topic string")
-  (let [dev-eui ""]
-    (is (= "DEVID" dev-eui))))
+(deftest partition-by-onto-chan-transducer
+  (testing "partition into channel transducer")
+  (let [input (vec (range 20))
+        output (sequence
+                (mapthethings-server.batch/partition-by-onto-chan identity)
+                (range 20))
+        ; All these ways block.
+        ; merged (async/merge output)
+        ; output (<!! (async/reduce conj [] merged))]
+        ; output (<!! (async/reduce conj [] (async/merge output)))]
+        ; output (<!! (go-loop [acc [] v (<! merged)]
+        ;               (if (nil? v)
+        ;                 acc
+        ;                 (recur (conj acc v) (<! merged)))))]
+        output (<!! (go-loop [acc [] chs output]
+                      (if chs
+                        (recur (conj acc (<! (first chs))) (next chs))
+                        acc)))]
+    (is (= input output)))
+  (let [input (vec (range 20))
+        output (chan 10 (mapthethings-server.batch/partition-by-onto-chan identity))
+        _ (onto-chan output input)
+        output (<!! (go-loop [acc [] ch (<! output)]
+                      (if ch
+                        (recur (conj acc (<! ch)) (<! output))
+                        acc)))]
+    (is (= input output))))
