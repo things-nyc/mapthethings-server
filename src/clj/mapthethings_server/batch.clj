@@ -142,6 +142,8 @@
       (fn
         ([] (xf))
         ([result]
+         (let [ch @values-chan] ; Deref volatile value just once here
+          (when ch (async/close! ch)))
          (xf result))
         ([result el]
          (let [key-val (key-fn el)

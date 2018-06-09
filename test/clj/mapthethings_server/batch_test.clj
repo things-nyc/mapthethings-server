@@ -57,4 +57,44 @@
                       (if ch
                         (recur (conj acc (<! ch)) (<! output))
                         acc)))]
+    (is (= input output)))
+
+  (testing "when it is actually partitioning")
+  (let [input (vec (mapcat #(identity [% %]) (range 20)))
+        output (chan 10 (comp
+                          (mapthethings-server.batch/partition-by-onto-chan identity)
+                          (map #(async/reduce conj [] %))))
+        _ (onto-chan output input)
+        output (<!! (go-loop [acc [] ch (<! output)]
+                      (if ch
+                        (recur (concat acc (<! ch)) (<! output))
+                        acc)))]
+    (is (= input output)))
+
+  (testing "Timing when it is actually partitioning")
+  #_
+  (let [input (vec (mapcat #(identity [% %]) (range 20)))
+        output (chan 10 (comp
+                          (mapthethings-server.batch/partition-by-onto-chan identity)
+                          (map #(async/reduce conj [] %))))
+        feed (go-loop [in (seq input)] ; Feed with delay to demonstrate that output gets items only as they are issued.
+              (if in
+                (do
+                  (println "Feeding" (first in))
+                  (<! (async/timeout 200))
+                  (>! output (first in))
+                  (recur (next in)))
+                (async/close! output)))
+        output (<!! (go-loop [acc [] ch (<! output)]
+                      (println acc)
+                      (if ch
+                        (recur (concat acc (<! ch)) (<! output))
+                        acc)))]
+        ; Wait for both feed and output to close.
+        ; output (<!! (go-loop []
+        ;               (let [[val ch] (async/alts! [output feed])
+        ;                     result (if (= ch output) val)]
+        ;                 (if result
+        ;                   result
+        ;                   (recur)))))]
     (is (= input output))))
