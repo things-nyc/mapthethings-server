@@ -40,7 +40,7 @@
                  [com.fasterxml.jackson.dataformat/jackson-dataformat-smile "2.7.8"]
 
                  [amazonica "0.3.76"]
-                 [clj-time "0.12.0"]]
+                 [clj-time "0.14.4"]]
                  ;[com.amazonaws.geo/dynamodb-geo "1.0.0"]
 
   :min-lein-version "2.0.0"
