@@ -142,9 +142,8 @@
      :import-cnt 0
      :attempt-cnt 0
      :success-cnt 0
-     :rssi {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}
-     :lsnr {:avg 0.0 :q 0.0 :cnt 0 :std 0.0}}))
-
+     :rssi (stats/cummulative-stat)
+     :lsnr (stats/cummulative-stat)}))
 
 (defn update-grid [grid msg]
   (let [level (:level grid)
