@@ -37,15 +37,17 @@
 (defn hex2bin [hex]
   (s/join (map hexLookup (seq hex))))
 
-(defn hash2geo [hash]
+(defn hash2bin [hash]
   (let [bits (bit-length-from-hash hash)
         bin (hex2bin (subs hash 1))
-        bin-len (count bin)
-        bin (cond
-              (< bits bin-len) (subs bin (- bin-len bits)) ; Chop extra from front
-              (> bits bin-len) (str (apply str (repeat (- bits bin-len) \0)) bin) ; Prefix with 0's
-              :else bin)]
-    (GeoHash/fromBinaryString bin)))
+        bin-len (count bin)]
+    (cond
+      (< bits bin-len) (subs bin (- bin-len bits)) ; Chop extra from front
+      (> bits bin-len) (str (apply str (repeat (- bits bin-len) \0)) bin) ; Prefix with 0's
+      :else bin)))
+
+(defn hash2geo [hash]
+  (GeoHash/fromBinaryString (hash2bin hash)))
 
 (defn coordinate-from-hash [hash]
   (let [geo (hash2geo hash)
@@ -57,11 +59,23 @@
 (defn geohash-to-string [g]
   (format "%s%X" (get bit-prefix (.significantBits g)) (.ord g)))
 
+(defn split-hash
+  "Returns a vector [hash extra] where hash is the input hash with 2*splitLevel bits taken off. Extra is a number representing those bits."
+  [hash split-level]
+  (let [bin (hash2bin hash)
+        bin-len (count bin)
+        new-bin-len (- bin-len (* 2 split-level))
+        new-bin (subs bin 0 new-bin-len)
+        extra (subs bin new-bin-len)
+        hash (geohash-to-string (GeoHash/fromBinaryString new-bin))]
+    [hash extra]))
+
 (defn- normalize-cycle
   "Steps value to lie within a single cycle"
   [min max v]
   (let [step (- max min)]
     (cond
+      (nil? v) v
       (< v min) (normalize-cycle min max (+ v step))
       (> v max) (normalize-cycle min max (- v step))
       :else v)))
@@ -80,8 +94,10 @@
 (defn grid-hash-raw [lat lon level]
     (GeoHash/withBitPrecision (normalize-lat lat) (normalize-lon lon) (+ level level)))
 
-(defn cell-hash-raw [lat lon level]
-    (grid-hash-raw lat lon (+ level 5))) ; 10 extra bits
+(defn cell-level [level] (+ level 5)) ; 10 extra bits
+
+(defn cell-hash-raw [lat lon grid-level]
+    (grid-hash-raw lat lon (cell-level grid-level)))
 
 (def grid-hash (comp geohash-to-string grid-hash-raw))
 (def cell-hash (comp geohash-to-string cell-hash-raw))
@@ -109,6 +125,9 @@
       rssi (update :rssi stats/cummulative-stat rssi)
       lsnr (update :lsnr stats/cummulative-stat lsnr))))
 
+(defn recent-timestamp [ta tb]
+  (if (> 0 (compare ta tb)) ta tb))
+
 (defn update-cell [cell msg]
   (-> cell
     (update-signals msg)
@@ -119,10 +138,17 @@
       (= "import" (:type msg))  (update :import-cnt incnil)
       (= "attempt" (:type msg)) (update :attempt-cnt incnil)
       (:tracked msg)            (update :success-cnt incnil)
-      (:timestamp msg)        (assoc :timestamp (:timestamp msg)))))
+      (:timestamp msg)          (assoc :timestamp (recent-timestamp (:timestamp msg) (:timestamp cell))))))
 
-(defn make-cell [lat lon level]
-  (let [geohash (cell-hash-raw lat lon level)
+(defn sum-cells [cell1 cell2]
+  (->
+    (reduce #(assoc %1 %2 (+ (%2 cell1) (%2 cell2))) cell1 [:count :ttn-cnt :api-cnt :import-cnt :attempt-cnt :success-cnt])
+    (assoc :rssi (stats/sum-stat (:rssi cell1) (:rssi cell2)))
+    (assoc :lsnr (stats/sum-stat (:lsnr cell1) (:lsnr cell2)))
+    (assoc :timestamp (recent-timestamp (:timestamp cell1) (:timestamp cell2)))))
+
+(defn make-cell [lat lon cell-level]
+  (let [geohash (grid-hash-raw lat lon cell-level) ; Yes, grid-hash-raw, because we expect to get actual level of cell passed in.
         box (.getBoundingBox geohash)
         ul (.getUpperLeft box)
         lr (.getLowerRight box)
@@ -152,7 +178,7 @@
         ch (keyword (cell-hash lat lon level))]
     (if (get-in grid [:cells ch])
       (update-in grid [:cells ch] update-cell msg)
-      (assoc-in grid [:cells ch] (update-cell (make-cell lat lon level) msg)))))
+      (assoc-in grid [:cells ch] (update-cell (make-cell lat lon (cell-level level)) msg)))))
 
 (def GridCache (ref (cache/->LUCache {} {} (or (edn/read-string (env :grid-cache-size)) 2000))))
 #_(cache/evict C :b)
@@ -175,7 +201,7 @@
                         :bucket-name bucket-name
                         :key key)))]
           ;_ (println obj)]
-      (json/read-str obj :key-fn keyword))
+      (assoc (json/read-str obj :key-fn keyword) :s3key key))
     (catch AmazonS3Exception e
       (log/error e "Error fetching object")
       {:error "Failed to load object" :key key :exception e})))
