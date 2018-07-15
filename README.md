@@ -13,6 +13,21 @@ global coverage map for The Things Network (TTN).
 - Serve single page MapTheThings Web app that shows coverage
 - Serve data to MapTheThings Web app - different resolution depending on zoom
 
+## Data Formats
+The server supports some different data packet formats. Each packet starts
+with a tag byte that indicates how the rest should be interpreted.
+
+- 01 001122 001122 (little endian 24bit lat, lon. Untracked.)
+- 02 001122 001122 (little endian 24bit lat, lon. Tracked.)
+- 03 Unused (SMS message experiment)
+- 04 Unused (multi-part packets)
+- 05 221100 221100 1100 1100 64 (network byte order 24bit lat, lon, 16bit alt, hdop, 8bit battery) ([Manhattan Mapper](https://github.com/frankleonrose/ManhattanMapper))
+- 81 001122 001122 (little endian 24bit lat, lon. Untracked. Test message.)
+
+lat = lat / 93206.0; (More precision expanding 180° (-90° - 90°) into 24bits. Probably not a decision I would repeat.)
+lon = lon / 46603.0; (Less precision expanding 360° (-180° - 180°) into 24bits.)
+hdop = hdop / 1000.0;
+
 ## Contributing Data
 
 1. MapTheThings - App & Node (Pending)
