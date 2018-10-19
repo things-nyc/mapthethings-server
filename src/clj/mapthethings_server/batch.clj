@@ -222,7 +222,7 @@
 (defn batch-put-items
   "TODO: Make this actually batch items and call batch put..."
   [ddb table-name & {:keys [default-buffer-size]
-                     :or {:default-buffer-size 10}}]
+                     :or {default-buffer-size 10}}]
   ; Don't actually perform action in channel xf because who knows where that's running?
   ; (chan default-buffer-size (map (do (prn key %) (write-object ddb table-name %))))
   (let [c (chan default-buffer-size)]
@@ -252,7 +252,7 @@
   "Scan S3 messages bucket putting each one in newly created messages table.
   Runs messages through a pipeline where it enriches them, plucks out only minimal attribute set, and filters out errors."
   [{:keys [s3 ddb messages-bucket-name messages-table-name default-buffer-size]
-    :or {:default-buffer-size 10}} level]
+    :or {default-buffer-size 10}} level]
   (go
     (let [xf (comp (filter workable-message) (map (partial enrich-message level)) (filter use-message) (map storable-message))
           msgs-chan (chan default-buffer-size xf)
