@@ -27,7 +27,8 @@
     (put! obj-chan {:error "Unimplemented"} (fn [_] (close! obj-chan))))
   (write-json [this bucket-name key obj]
     (go {:error "Unimplemented"}))
-  (get-json-bucket [this bucket-name list-chan]
+  (get-json-bucket [this bucket-name list-chan & {:keys [default-buffer-size]
+                                                  :or {default-buffer-size 10}}]
     (put! list-chan {:error "Unimplemented"} (fn [_] (close! list-chan)))))
 
 
